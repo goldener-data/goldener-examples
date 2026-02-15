@@ -1,40 +1,38 @@
-# CIFAR-10 Split Comparison Experiment Configuration
 gold_splitter:
   min_pxt_insert_size: 10000
   batch_size: 128
   num_workers: 15
   table_name: cifar10_dinov3small_224
   update_selection: True
+  n_clusters: 50
 
-# Experiment settings
-model_type: vit # cnn, resnet, vit
-split_method: gold  # Options: random, gold, or all
-val_ratio: 0.3
+exp:
+  split_method: gold  # Options: random, gold, or all
+  model: cnn # cnn, resnet, vit
+  val_ratio: 0.3
+  max_epochs: 50
+  learning_rate: 0.001
+  batch_size: 256
+  validate_on_test: True
+  random_state: 42
+  checkpoint: checkpoints
 
-data_dir: .data
+data:
+  cache: .data
+  remove_ratio: null
+  drop_duplicate_table: True
+  duplicate_table_path: null
+  to_duplicate_clusters: null
+  cluster_count: null
+  duplicate_per_sample: null
+  random_split_state: 42
+  num_workers: 15
 
-random_state: 42
+logging:
+  mlflow_tracking_uri: mlruns
+  mlflow_experiment_name: cifar10
+  mlflow_run_name: cifar10
 
-remove_ratio: 0.98
-duplicate_table_path: duplicate_cifar10_dinov3small_224
-drop_duplicate_table: True
-to_duplicate_clusters: 2
-cluster_count: 10
-duplicate_per_sample: 10
-
-random_split_state: 42
-
-max_epochs: 100
-batch_size: 256
-learning_rate: 0.001
-num_workers: 15
-validate_on_test: True
-
-# MLFlow settings
-mlflow_tracking_uri: mlruns
-mlflow_experiment_name: cifar10
-mlflow_run_name: cifar10
-
-# Debug settings
-debug_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
-debug_train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
+debug_count:
+  test_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
+  train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit

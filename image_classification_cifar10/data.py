@@ -185,30 +185,28 @@ class CIFAR10DataModule(LightningDataModule):
     ) -> None:
         super().__init__()
 
-        self.data_dir = cfg["data_dir"]
-        self.gold_splitter_cfg = cfg["gold_splitter"]
+        self.data_dir = cfg.data.cache
+        self.gold_splitter_cfg = cfg.gold_splitter
 
-        self.random_state = cfg["random_state"]
+        self.random_state = cfg.exp.random_state
 
-        self.val_ratio = cfg["val_ratio"]
+        self.val_ratio = cfg.exp.val_ratio
 
-        self.random_split_state = cfg["random_split_state"]
-        self.remove_ratio = cfg["remove_ratio"]
-        self.duplicate_table_path = cfg["duplicate_table_path"]
-        self.drop_duplicate_table = cfg["drop_duplicate_table"]
-        self.to_duplicate_clusters = cfg["to_duplicate_clusters"]
-        self.cluster_count = cfg["cluster_count"]
-        self.duplicate_per_sample = cfg["duplicate_per_sample"]
+        self.random_split_state = cfg.data.random_split_state
+        self.remove_ratio = cfg.data.remove_ratio
+        self.duplicate_table_path = cfg.data.duplicate_table_path
+        self.drop_duplicate_table = cfg.data.drop_duplicate_table
+        self.to_duplicate_clusters = cfg.data.to_duplicate_clusters
+        self.cluster_count = cfg.data.cluster_count
+        self.duplicate_per_sample = cfg.data.duplicate_per_sample
 
-        self.batch_size = cfg["batch_size"]
-        self.num_workers = cfg["num_workers"]
-        self.max_batches = cfg["debug_train_count"]
+        self.batch_size = cfg.exp.batch_size
+        self.num_workers = cfg.data.num_workers
+        self.max_batches = cfg.debug_count.train_count
         self.train_count = (
-            cfg["debug_train_count"] * self.batch_size
-            if cfg["debug_train_count"] is not None
-            else None
+            self.max_batches * self.batch_size if self.max_batches is not None else None
         )
-        self.validate_on_test = cfg["validate_on_test"]
+        self.validate_on_test = cfg.exp.validate_on_test
 
         # Define transforms
         self.transform = CIFAR10_PREPROCESS
@@ -227,7 +225,7 @@ class CIFAR10DataModule(LightningDataModule):
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
         )
-        if cfg["gold_splitter"]["update_selection"]:
+        if cfg.gold_splitter.update_selection:
             pxt.drop_table(
                 self.gold_splitter.selector.table_path, if_not_exists="ignore"
             )

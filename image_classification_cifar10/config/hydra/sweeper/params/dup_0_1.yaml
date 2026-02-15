@@ -1,0 +1,6 @@
+gold_splitter.n_clusters: 10
+data.remove_ratio: 0.90
+data.duplicate_table_path: cifar10_duplicate
+data.to_duplicate_clusters: 4
+data.cluster_count: 10
+data.duplicate_per_sample: 10

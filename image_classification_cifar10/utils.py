@@ -4,6 +4,8 @@ import hydra
 import timm
 import torch
 from PIL.Image import Image
+from sklearn.cluster import KMeans
+from goldener.clusterize import GoldSKLearnClusteringTool, GoldClusterizer
 from goldener.describe import GoldDescriptor
 from goldener.extract import TorchGoldFeatureExtractor, TorchGoldFeatureExtractorConfig
 from goldener.select import GoldSelector, GoldGreedyClosestPointSelection
@@ -89,10 +91,27 @@ def get_gold_splitter(
     batch_size = splitter_config["batch_size"]
     num_workers = splitter_config["num_workers"]
     min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
+    n_clusters = splitter_config["n_clusters"]
 
     to_keep_schema = {"label": pxt.String}
 
     table_name = f"{name_prefix}_{splitter_config["table_name"]}"
+
+    clusterizer = (
+        None
+        if n_clusters < 2
+        else GoldClusterizer(
+            table_path=f"{table_name}_cluster",
+            clustering_tool=GoldSKLearnClusteringTool(
+                KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
+            ),
+            vectorized_key="features",
+            min_pxt_insert_size=min_pxt_insert_size,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            to_keep_schema=to_keep_schema,
+        )
+    )
 
     descriptor = get_gold_descriptor(
         table_name=f"{table_name}_description",
@@ -107,7 +126,7 @@ def get_gold_splitter(
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
         selection_tool=GoldGreedyClosestPointSelection(
-            device="cuda" if torch.cuda.is_available() else "cpu"
+            device="cuda:0" if torch.cuda.is_available() else "cpu"
         ),
         reducer=None,
         vectorized_key="features",
@@ -126,6 +145,7 @@ def get_gold_splitter(
         sets=sets,
         descriptor=descriptor,
         vectorizer=None,
+        clusterizer=clusterizer,
         selector=selector,
         max_batches=max_batches,
     )
