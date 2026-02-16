@@ -55,19 +55,21 @@ def run_experiment(
     mlflow_logger.log_hyperparams(
         {
             "split_method": split_method,
+            "model_type": model_type,
             "val_ratio": cfg.exp.val_ratio,
+            "max_epochs": cfg.exp.max_epochs,
+            "learning_rate": cfg.exp.learning_rate,
+            "batch_size": cfg.exp.batch_size,
             "random_state": cfg.exp.random_state,
             "remove_ratio": cfg.data.remove_ratio,
+            "drop_duplicate_table": cfg.data.drop_duplicate_table,
             "to_duplicate_clusters": cfg.data.to_duplicate_clusters,
             "cluster_count": cfg.data.cluster_count,
             "duplicate_per_sample": cfg.data.duplicate_per_sample,
             "random_split_state": cfg.data.random_split_state,
-            "max_epochs": cfg.exp.max_epochs,
-            "batch_size": cfg.exp.batch_size,
-            "learning_rate": cfg.exp.learning_rate,
             "splitting_duration": splitting_duration,
             "splitting_update_selection": cfg.gold_splitter.update_selection,
-            "model_type": model_type,
+            "n_clusters": cfg.gold_splitter.n_clusters,
         }
     )
 
