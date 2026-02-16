@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
@@ -267,7 +268,7 @@ class CIFAR10DataModule(LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         if stage == "fit" or stage is None:
-            dataset = GoldCifar10(
+            val_dataset = GoldCifar10(
                 root=self.data_dir,
                 train=True,
                 transform=self.transform,
@@ -285,31 +286,33 @@ class CIFAR10DataModule(LightningDataModule):
                 cluster_count=self.cluster_count,
                 duplicate_per_sample=self.duplicate_per_sample,
             )
-            dataset.transform = self.train_transforms
-            self.duplicated_train_indices = dataset.duplicated_indices
-            self.excluded_train_indices = dataset.excluded_indices
+            # the dataset used to train the model will benefit from data augmentation
+            train_dataset = deepcopy(val_dataset)
+            train_dataset.transform = self.train_transforms
+            self.duplicated_train_indices = val_dataset.duplicated_indices
+            self.excluded_train_indices = val_dataset.excluded_indices
 
             # make random splitting with sklearn
             self.sk_train_indices, self.sk_val_indices = train_test_split(
-                range(len(dataset)),
-                test_size=int(self.val_ratio * len(dataset)),
+                range(len(val_dataset)),
+                test_size=int(self.val_ratio * len(val_dataset)),
                 random_state=self.random_split_state,
                 shuffle=True,
-                stratify=dataset.targets_as_array,
+                stratify=val_dataset.targets_as_array,
             )
-            self.sk_train_dataset = Subset(dataset, self.sk_train_indices)
-            self.sk_val_dataset = Subset(dataset, self.sk_val_indices)
+            self.sk_train_dataset = Subset(train_dataset, self.sk_train_indices)
+            self.sk_val_dataset = Subset(val_dataset, self.sk_val_indices)
 
             # make gold splitting
-            split_table = self.gold_splitter.split_in_table(dataset)
+            split_table = self.gold_splitter.split_in_table(val_dataset)
             splits = self.gold_splitter.get_split_indices(
                 split_table, selection_key="selected", idx_key="idx"
             )
 
             self.gold_train_indices = list(splits["train"])
             self.gold_val_indices = list(splits["val"])
-            self.gold_train_dataset = Subset(dataset, self.gold_train_indices)
-            self.gold_val_dataset = Subset(dataset, self.gold_val_indices)
+            self.gold_train_dataset = Subset(train_dataset, self.gold_train_indices)
+            self.gold_val_dataset = Subset(val_dataset, self.gold_val_indices)
 
         if stage == "test" or stage is None:
             self.test_dataset = GoldCifar10(
