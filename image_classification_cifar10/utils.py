@@ -5,16 +5,19 @@ import timm
 import torch
 from PIL.Image import Image
 from sklearn.cluster import KMeans
-from goldener.clusterize import GoldSKLearnClusteringTool, GoldClusterizer
-from goldener.describe import GoldDescriptor
-from goldener.extract import TorchGoldFeatureExtractor, TorchGoldFeatureExtractorConfig
-from goldener.select import GoldSelector, GoldGreedyClosestPointSelection
-from goldener.split import GoldSet, GoldSplitter
-from goldener.vectorize import (
-    TensorVectorizer,
-    Filter2DWithCount,
-    FilterLocation,
+from goldener.vision.vectorizers import get_vit_class_token_vectorizer
+from goldener import (
+    GoldSKLearnClusteringTool,
+    GoldClusterizer,
+    GoldDescriptor,
+    TorchGoldFeatureExtractor,
+    TorchGoldFeatureExtractorConfig,
+    GoldSelector,
+    GoldGreedyKCenterSelection,
+    GoldSet,
+    GoldSplitter,
 )
+
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, ToTensor, Normalize, Resize
 
@@ -67,10 +70,7 @@ def get_gold_descriptor(
     return GoldDescriptor(
         table_path=table_name,
         extractor=extractor,
-        vectorizer=TensorVectorizer(
-            keep=Filter2DWithCount(keep=True, filter_location=FilterLocation.START),
-            channel_pos=2,
-        ),
+        vectorizer=get_vit_class_token_vectorizer(),
         collate_fn=collate_cifar10,
         to_keep_schema=to_keep_schema,
         min_pxt_insert_size=min_pxt_insert_size,
@@ -125,20 +125,20 @@ def get_gold_splitter(
     # all the data with the closest distance to their neighbors
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
-        selection_tool=GoldGreedyClosestPointSelection(
+        selection_tool=GoldGreedyKCenterSelection(
             device="cuda:0" if torch.cuda.is_available() else "cpu"
         ),
         reducer=None,
         vectorized_key="features",
-        class_key="label",
+        label_key="label",
         to_keep_schema=to_keep_schema,
         batch_size=batch_size,
         num_workers=num_workers,
     )
 
     sets = [
-        GoldSet(name="val", size=val_ratio),
         GoldSet(name="train", size=1 - val_ratio),
+        GoldSet(name="val", size=val_ratio),
     ]
 
     return GoldSplitter(

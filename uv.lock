@@ -1540,7 +1540,7 @@ dev = [
 
 [[package]]
 name = "goldener"
-version = "3.1.0"
+version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coreax" },
@@ -1554,9 +1554,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "umap-learn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/95/99/4d836cd12bb6502e4338a56ce4d8a2b981313201a5b15772ab828b6f3af0/goldener-3.1.0.tar.gz", hash = "sha256:52d98942c96a1cbcff65300f73ccacb9c2a6405e00ef258903a9ab9a946bd8fe", size = 74052, upload-time = "2026-02-13T22:25:12.429Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dc/f2/24a804fa2b4586f884c601ce2c154ac1a88c989c91713219269386918bed/goldener-4.2.0.tar.gz", hash = "sha256:04bbedc8dc148a0d2ea2f645f235bed5cb3dc3c6fd099ee80899cd679411f838", size = 80857, upload-time = "2026-02-23T21:27:17.699Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/7b/f6e1fa4f3fffc206d6c4394b4b030419894f5ed831ec13b926009be35c44/goldener-3.1.0-py3-none-any.whl", hash = "sha256:bf57ad302cdae91c1628ad4366d7f8194c572a71d5a1cc6d5351f765945d7b8a", size = 58096, upload-time = "2026-02-13T22:25:10.76Z" },
+    { url = "https://files.pythonhosted.org/packages/96/44/82068ddcdb6b28e89b1a79305f547fd7ecfb89ac4c29009a42e3eec5c5db/goldener-4.2.0-py3-none-any.whl", hash = "sha256:1049c894ce8f95808f54fcad026147769ed88be38b24163472f4c0219009078a", size = 64445, upload-time = "2026-02-23T21:27:16.104Z" },
 ]
 
 [[package]]
