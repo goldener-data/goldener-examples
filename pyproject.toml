@@ -24,13 +24,15 @@ dependencies = [
     "scikit-learn",
     "torchmetrics",
     "hydra-core",
+    "any-gold",
 ]
 
 [project.optional-dependencies]
 vision = [
     "torchvision",
     "timm",
-    "pillow"
+    "pillow",
+    "segmentation_models_pytorch"
 ]
 
 

@@ -3,23 +3,24 @@ import pixeltable as pxt
 import hydra
 import timm
 import torch
-from PIL.Image import Image
 from sklearn.cluster import KMeans
-from goldener.clusterize import GoldSKLearnClusteringTool, GoldClusterizer
-from goldener.describe import GoldDescriptor
-from goldener.extract import TorchGoldFeatureExtractor, TorchGoldFeatureExtractorConfig
-from goldener.select import GoldSelector, GoldGreedyClosestPointSelection
-from goldener.split import GoldSet, GoldSplitter
-from goldener.vectorize import (
-    TensorVectorizer,
-    Filter2DWithCount,
-    FilterLocation,
+from any_gold.tools.image.utils import gold_multi_class_segmentation_collate_fn
+from goldener.vision.vectorizers import get_vit_patch_tokens_vectorizer
+from goldener import (
+    GoldSKLearnClusteringTool,
+    GoldClusterizer,
+    GoldDescriptor,
+    TorchGoldFeatureExtractor,
+    TorchGoldFeatureExtractorConfig,
+    GoldSelector,
+    GoldGreedyKCenterSelection,
+    GoldSet,
+    GoldSplitter,
 )
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, ToTensor, Normalize, Resize
-import numpy as np
 
-VOC_PREPROCESS = Compose(
+PASCAL_VOC_PREPROCESS = Compose(
     [
         ToTensor(),
         Resize(224),
@@ -28,46 +29,14 @@ VOC_PREPROCESS = Compose(
 )
 
 
-def collate_voc(
-    batch: list[tuple[Image, Image, int]],
-) -> dict[str, torch.Tensor | list[str] | list[int]]:
-    """
-    Collate function for VOC dataset that processes images and segmentation masks.
-    For gold splitting, we need to extract features from patches corresponding to
-    the segmentation mask rather than from class tokens.
-    
-    Note: The mask is used for creating a label identifier, but feature extraction
-    is done from the image patches only.
-    """
-    images, masks, indices = zip(*batch)
-    imgs_tensor = torch.stack([VOC_PREPROCESS(image) for image in images])
-    
-    # Create a label string based on the image index
-    # We use a simple label since segmentation doesn't have a single class per image
-    str_targets = [f"img_{i}" for i in indices]
-    idx_list = [int(idx) for idx in indices]
-    return {
-        "data": imgs_tensor,
-        "label": str_targets,
-        "idx": idx_list,
-    }
-
-
 def get_gold_descriptor(
     table_name: str,
     min_pxt_insert_size: int,
     batch_size: int,
     num_workers: int,
     to_keep_schema: dict,
+    target_to_label: dict[tuple[int, int, int], str],
 ) -> GoldDescriptor:
-    """
-    Create a GoldDescriptor for VOC segmentation.
-    
-    The key difference from image classification is that we extract features
-    from patches corresponding to the segmentation mask rather than using
-    the class token. This is done by using Filter2DWithCount with FilterLocation.ALL
-    to keep all patch embeddings, which will be filtered based on the mask.
-    """
     device = (
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
     )
@@ -90,12 +59,12 @@ def get_gold_descriptor(
     return GoldDescriptor(
         table_path=table_name,
         extractor=extractor,
-        vectorizer=TensorVectorizer(
-            keep=Filter2DWithCount(keep=True, filter_location=FilterLocation.ALL),
-            channel_pos=2,
-        ),
-        collate_fn=collate_voc,
+        vectorizer=get_vit_patch_tokens_vectorizer(),
+        collate_fn=gold_multi_class_segmentation_collate_fn,
         to_keep_schema=to_keep_schema,
+        target_to_label=target_to_label,
+        label_key="label",
+        exclude_full_zero_target=True,
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=batch_size,
         num_workers=num_workers,
@@ -107,6 +76,7 @@ def get_gold_splitter(
     splitter_cfg: DictConfig,
     name_prefix: str,
     val_ratio: float,
+    target_to_label: dict[tuple[int, int, int], str],
     max_batches: int | None = None,
 ) -> GoldSplitter:
     splitter_config = hydra.utils.instantiate(splitter_cfg)
@@ -142,26 +112,25 @@ def get_gold_splitter(
         batch_size=batch_size,
         num_workers=num_workers,
         to_keep_schema=to_keep_schema,
+        target_to_label=target_to_label,
     )
 
-    # Splitting will be done by moving iteratively to the validation set
-    # all the data with the closest distance to their neighbors
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
-        selection_tool=GoldGreedyClosestPointSelection(
+        selection_tool=GoldGreedyKCenterSelection(
             device="cuda:0" if torch.cuda.is_available() else "cpu"
         ),
         reducer=None,
         vectorized_key="features",
-        class_key="label",
+        label_key="label",
         to_keep_schema=to_keep_schema,
         batch_size=batch_size,
         num_workers=num_workers,
     )
 
     sets = [
-        GoldSet(name="val", size=val_ratio),
         GoldSet(name="train", size=1 - val_ratio),
+        GoldSet(name="val", size=val_ratio),
     ]
 
     return GoldSplitter(

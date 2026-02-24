@@ -121,8 +121,6 @@ def get_gold_splitter(
         to_keep_schema=to_keep_schema,
     )
 
-    # Splitting will be done by moving iteratively to the validation set
-    # all the data with the closest distance to their neighbors
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
         selection_tool=GoldGreedyKCenterSelection(

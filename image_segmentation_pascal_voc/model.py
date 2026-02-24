@@ -1,20 +1,9 @@
 from lightning import LightningModule
 import torch
+import segmentation_models_pytorch as smp
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
-from torch.nn import (
-    functional as F,
-    Sequential,
-    Conv2d,
-    BatchNorm2d,
-    ReLU,
-    MaxPool2d,
-    Linear,
-    Dropout,
-    ConvTranspose2d,
-    Upsample,
-)
+import torch.nn.functional as F
 from torchmetrics.classification import MulticlassJaccardIndex
-import timm
 
 
 class VOCSegmentationLightningModule(LightningModule):
@@ -35,57 +24,23 @@ class VOCSegmentationLightningModule(LightningModule):
 
     def _setup_model(self, model_type: str) -> None:
         if model_type == "unet":
-            # Simple U-Net style segmentation model
-            self.encoder = Sequential(
-                Conv2d(3, 64, kernel_size=3, padding=1),
-                BatchNorm2d(64),
-                ReLU(),
-                Conv2d(64, 64, kernel_size=3, padding=1),
-                BatchNorm2d(64),
-                ReLU(),
-                MaxPool2d(2),
-                Conv2d(64, 128, kernel_size=3, padding=1),
-                BatchNorm2d(128),
-                ReLU(),
-                Conv2d(128, 128, kernel_size=3, padding=1),
-                BatchNorm2d(128),
-                ReLU(),
-                MaxPool2d(2),
+            self.model = smp.Unet(
+                encoder_name="tu-convnext_tiny",
+                encoder_weights="imagenet",
+                in_channels=3,
+                classes=20,
             )
-            self.decoder = Sequential(
-                Upsample(scale_factor=2, mode="bilinear", align_corners=True),
-                Conv2d(128, 64, kernel_size=3, padding=1),
-                BatchNorm2d(64),
-                ReLU(),
-                Upsample(scale_factor=2, mode="bilinear", align_corners=True),
-                Conv2d(64, self.num_classes, kernel_size=1),
-            )
-            self.model = Sequential(self.encoder, self.decoder)
-        elif model_type == "vit_seg":
-            # ViT-based segmentation with a simple segmentation head
-            self.backbone = timm.create_model(
-                model_name="vit_small_patch16_dinov3.lvd1689m",
-                pretrained=True,
-                num_classes=0,  # Remove classification head
-                img_size=224,
-            )
-            # Freeze backbone - check if it has parameters to freeze
-            for param in self.backbone.parameters():
-                param.requires_grad = False
-            
-            # Simple segmentation head
-            # ViT outputs features of shape (B, num_patches, embed_dim)
-            # We need to reshape and upsample to get segmentation masks
-            embed_dim = self.backbone.embed_dim
-            self.seg_head = Sequential(
-                Linear(embed_dim, 256),
-                ReLU(),
-                Dropout(0.1),
-                Linear(256, self.num_classes),
+        elif model_type == "vit":
+            # Segformer-like architecture with ViT backbone and simple segmentation head
+            self.model = smp.Segformer(
+                encoder_name="resnet34",
+                encoder_weights="imagenet",
+                in_channels=3,
+                classes=20,
             )
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
-        
+
         self.model_type = model_type
 
     @property
@@ -95,28 +50,7 @@ class VOCSegmentationLightningModule(LightningModule):
         return "test_as_val" in self.trainer.val_dataloaders
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.model_type == "unet":
-            return self.model(x)
-        elif self.model_type == "vit_seg":
-            # Get patch embeddings from ViT
-            features = self.backbone.forward_features(x)
-            # Remove class token
-            patch_features = features[:, 1:, :]  # (B, num_patches, embed_dim)
-            
-            # Apply segmentation head
-            logits = self.seg_head(patch_features)  # (B, num_patches, num_classes)
-            
-            # Reshape to spatial dimensions
-            # For 224x224 input with patch_size=16, we have 14x14 patches
-            B, N, C = logits.shape
-            H = W = int(N ** 0.5)
-            logits = logits.transpose(1, 2).reshape(B, C, H, W)
-            
-            # Upsample to original resolution
-            logits = F.interpolate(logits, size=(224, 224), mode="bilinear", align_corners=True)
-            return logits
-        else:
-            return self.model(x)
+        return self.model(x)
 
     def on_train_start(self) -> None:
         self.train_iou = MulticlassJaccardIndex(num_classes=self.num_classes)
@@ -131,16 +65,14 @@ class VOCSegmentationLightningModule(LightningModule):
 
         # Get predictions
         logits = self(x)
-        
-        # Resize target to match logits if needed
-        if y.shape[-2:] != logits.shape[-2:]:
-            y = F.interpolate(y.float(), size=logits.shape[-2:], mode="nearest")
-        
+
         # Convert mask to class indices (assuming grayscale mask with class values)
-        y = y.squeeze(1).long()  # Remove channel dimension and convert to long
-        
+        y = y.long()  # Remove channel dimension and convert to long
+
         # Compute loss
-        loss = F.cross_entropy(logits, y, ignore_index=255)  # 255 is commonly used for void/ignore class
+        loss = F.cross_entropy(
+            logits, y, ignore_index=255
+        )  # 255 is commonly used for void/ignore class
         self.log(f"{prefix}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
         # Compute pixel accuracy

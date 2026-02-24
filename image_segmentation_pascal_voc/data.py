@@ -3,32 +3,30 @@ from copy import deepcopy
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import Tuple, Callable, Literal
+from typing import Callable, Literal
 
 import torch
 from lightning import LightningDataModule
 import numpy as np
 from omegaconf import DictConfig
 from torch.utils.data import Subset, DataLoader
+from any_gold import PascalVOC2012Segmentation
 import torchvision
 from torchvision.transforms.v2 import (
     Compose,
-    RandomHorizontalFlip,
     ColorJitter,
-    RandomRotation,
     ToTensor,
     Resize,
 )
-from torchvision.datasets import VOCSegmentation
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
 import pixeltable as pxt
 from goldener.split import GoldSplitter
-
+from goldener.vision.transform import PatchifyImageMask
 from image_segmentation_pascal_voc.utils import (
     get_gold_splitter,
     get_gold_descriptor,
-    VOC_PREPROCESS,
+    PASCAL_VOC_PREPROCESS,
 )
 
 logger = getLogger(__name__)
@@ -42,15 +40,14 @@ class Sample:
     training_set: Literal["train", "val"] | None = None
 
 
-class GoldVOCSegmentation(VOCSegmentation):
+class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
     def __init__(
         self,
         root: str | Path,
-        year: str = "2012",
-        image_set: str = "train",
+        split: str = "train",
         transform: None | Callable = None,
         target_transform: None | Callable = None,
-        download: bool = False,
+        override: bool = False,
         count: int | None = None,
         remove_ratio: float | None = None,
         duplicate_table_path: str | None = None,
@@ -61,33 +58,31 @@ class GoldVOCSegmentation(VOCSegmentation):
         random_state: int = 42,
     ) -> None:
         self.count = count
+
         super().__init__(
             root=root,
-            year=year,
-            image_set=image_set,
+            split=split,
             transform=transform,
             target_transform=target_transform,
-            download=download,
+            override=override,
         )
 
         # keep only a subset if count is specified
         # only the first 'count' samples are kept
-        original_length = len(self.images)
-        if count is not None:
-            self.images = self.images[:count]
-            self.masks = self.masks[:count]
+        original_length = len(self)
+        if count is not None and count < original_length:
+            self.samples: list[Path] = self.samples[:count]
 
         # keep only a subset if remove_ratio is specified
         # The removal is done randomly
         if remove_ratio is not None:
             training_indices, excluded = train_test_split(
-                range(len(self.images)),
+                range(len(self.samples)),
                 test_size=remove_ratio,
                 random_state=random_state,
                 shuffle=True,
             )
-            self.images = [self.images[i] for i in training_indices]
-            self.masks = [self.masks[i] for i in training_indices]
+            self.samples = [self.samples[i] for i in training_indices]
             self.excluded_indices = excluded
         else:
             self.excluded_indices = []
@@ -115,6 +110,7 @@ class GoldVOCSegmentation(VOCSegmentation):
                 batch_size=32,
                 num_workers=8,
                 to_keep_schema={"label": pxt.String},
+                target_to_label=self._LABEL_MAPPING,
             )
             if drop_duplicate_table:
                 pxt.drop_table(duplicate_table_path, if_not_exists="ignore")
@@ -132,13 +128,7 @@ class GoldVOCSegmentation(VOCSegmentation):
 
             # perform clustering and duplication per label
             random_generator = np.random.default_rng(random_state)
-            duplication_transform = Compose(
-                [
-                    RandomHorizontalFlip(),
-                    ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-                    RandomRotation(degrees=15),
-                ]
-            )
+
             for label, features in features_per_label.items():
                 assert cluster_count is not None and duplicate_per_sample is not None
                 label_indices = indices_per_label[label]
@@ -160,20 +150,10 @@ class GoldVOCSegmentation(VOCSegmentation):
                         duplicated_idx = label_indices[data_idx]
                         # For VOC, we need to duplicate both image and mask paths
                         for _ in range(duplicate_per_sample):
-                            self.images.append(self.images[duplicated_idx])
-                            self.masks.append(self.masks[duplicated_idx])
+                            self.samples.append(self.samples[duplicated_idx])
                         self.duplicated_indices.append(duplicated_idx)
         else:
             self.duplicated_indices = []
-
-    def __len__(self) -> int:
-        return len(self.images)
-
-    def __getitem__(self, index: int) -> Tuple:
-        # Call parent's __getitem__ to get image and mask using the proper API
-        img, mask = super().__getitem__(index)
-        # Parent class already applies transforms, so just add the index
-        return img, mask, index
 
 
 class VOCSegmentationDataModule(LightningDataModule):
@@ -207,12 +187,10 @@ class VOCSegmentationDataModule(LightningDataModule):
         self.validate_on_test = cfg.exp.validate_on_test
 
         # Define transforms
-        self.transform = VOC_PREPROCESS
+        self.transform = PASCAL_VOC_PREPROCESS
         self.train_transforms = Compose(
             [
-                RandomHorizontalFlip(),
                 ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-                RandomRotation(degrees=15),
             ]
             + self.transform.transforms
         )
@@ -221,7 +199,9 @@ class VOCSegmentationDataModule(LightningDataModule):
         self.mask_transform = Compose(
             [
                 ToTensor(),
-                Resize(224, interpolation=torchvision.transforms.InterpolationMode.NEAREST),
+                Resize(
+                    224, interpolation=torchvision.transforms.InterpolationMode.NEAREST
+                ),
             ]
         )
 
@@ -230,6 +210,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             name_prefix=self.settings_as_str,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
+            target_to_label=PascalVOC2012Segmentation._LABEL_MAPPING,
         )
         if cfg.gold_splitter.update_selection:
             pxt.drop_table(
@@ -252,7 +233,7 @@ class VOCSegmentationDataModule(LightningDataModule):
         self.sk_train_dataset: Subset
         self.sk_val_dataset: Subset
 
-        self.test_dataset: GoldVOCSegmentation
+        self.test_dataset: PascalVOC2012Segmentation
 
     @property
     def settings_as_str(self) -> str:
@@ -264,22 +245,21 @@ class VOCSegmentationDataModule(LightningDataModule):
 
     def prepare_data(self) -> None:
         # Download Pascal VOC
-        torchvision.datasets.VOCSegmentation(
-            root=self.data_dir, year="2012", image_set="train", download=True
-        )
-        torchvision.datasets.VOCSegmentation(
-            root=self.data_dir, year="2012", image_set="val", download=True
-        )
+        PascalVOC2012Segmentation(root=self.data_dir, split="train", override=False)
+        PascalVOC2012Segmentation(root=self.data_dir, split="val", override=False)
 
     def setup(self, stage: str | None = None) -> None:
         if stage == "fit" or stage is None:
-            val_dataset = GoldVOCSegmentation(
+            mask_transform = Compose(
+                self.mask_transform.transforms + [PatchifyImageMask(16)]
+            )
+
+            val_dataset = GoldPascalVOC2012Segmentation(
                 root=self.data_dir,
-                year="2012",
-                image_set="train",
+                split="train",
                 transform=self.transform,
-                target_transform=self.mask_transform,
-                download=False,
+                target_transform=mask_transform,
+                override=False,
                 count=self.train_count,
                 random_state=self.random_state,
                 remove_ratio=self.remove_ratio,
@@ -293,11 +273,16 @@ class VOCSegmentationDataModule(LightningDataModule):
                 cluster_count=self.cluster_count,
                 duplicate_per_sample=self.duplicate_per_sample,
             )
-            # the dataset used to train the model will benefit from data augmentation
-            train_dataset = deepcopy(val_dataset)
-            train_dataset.transform = self.train_transforms
             self.duplicated_train_indices = val_dataset.duplicated_indices
             self.excluded_train_indices = val_dataset.excluded_indices
+
+            # make gold splitting
+            split_table = self.gold_splitter.split_in_table(val_dataset)
+            splits = self.gold_splitter.get_split_indices(
+                split_table, selection_key="selected", idx_key="idx"
+            )
+            self.gold_train_indices = list(splits["train"])
+            self.gold_val_indices = list(splits["val"])
 
             # make random splitting with sklearn
             self.sk_train_indices, self.sk_val_indices = train_test_split(
@@ -306,85 +291,25 @@ class VOCSegmentationDataModule(LightningDataModule):
                 random_state=self.random_split_state,
                 shuffle=True,
             )
+
+            # assign datasets
+            val_dataset.target_transform = self.mask_transform
+            train_dataset = deepcopy(val_dataset)
+            train_dataset.transform = self.train_transforms
+
+            self.gold_train_dataset = Subset(train_dataset, self.gold_train_indices)
+            self.gold_val_dataset = Subset(val_dataset, self.gold_val_indices)
             self.sk_train_dataset = Subset(train_dataset, self.sk_train_indices)
             self.sk_val_dataset = Subset(val_dataset, self.sk_val_indices)
 
-            # make gold splitting
-            split_table = self.gold_splitter.split_in_table(val_dataset)
-            splits = self.gold_splitter.get_split_indices(
-                split_table, selection_key="selected", idx_key="idx"
-            )
-
-            self.gold_train_indices = list(splits["train"])
-            self.gold_val_indices = list(splits["val"])
-            self.gold_train_dataset = Subset(train_dataset, self.gold_train_indices)
-            self.gold_val_dataset = Subset(val_dataset, self.gold_val_indices)
-
         if stage == "test" or stage is None:
-            self.test_dataset = GoldVOCSegmentation(
+            self.test_dataset = GoldPascalVOC2012Segmentation(
                 root=self.data_dir,
-                year="2012",
-                image_set="val",
+                split="val",
                 transform=self.transform,
                 target_transform=self.mask_transform,
-                download=False,
+                override=False,
             )
-
-    def _get_features_by_indices(
-        self,
-        indices: list[int],
-        label: str | None = None,
-    ) -> list[Sample]:
-        vectorized = pxt.get_table(self.gold_splitter.descriptor.table_path)
-        assert vectorized is not None
-        query = vectorized.idx.isin(indices)
-        if label is not None:
-            query = query & (vectorized.label == label)  # type: ignore[assignment]
-
-        return [
-            row["features"]
-            for row in vectorized.where(query).select(vectorized.features).collect()
-        ]
-
-    def get_gold_train_features(self, label: str | None = None) -> list[Sample]:
-        return self._get_features_by_indices(
-            self.gold_train_indices,
-            label,
-        )
-
-    def get_gold_val_features(self, label: str | None = None) -> list[Sample]:
-        return self._get_features_by_indices(
-            self.gold_val_indices,
-            label,
-        )
-
-    def get_sk_train_features(self, label: str | None = None) -> list[Sample]:
-        return self._get_features_by_indices(
-            self.sk_train_indices,
-            label,
-        )
-
-    def get_sk_val_features(self, label: str | None = None) -> list[Sample]:
-        return self._get_features_by_indices(
-            self.sk_val_indices,
-            label,
-        )
-
-    def get_training_samples(self, label: str | None = None) -> list[Sample]:
-        vectorized = pxt.get_table(self.gold_splitter.descriptor.table_path)
-        assert vectorized is not None
-
-        return [
-            Sample(
-                dataset_idx=row["idx"],
-                features=row["features"],
-                label=row["label"],
-                training_set=None,
-            )
-            for row in vectorized.where(vectorized.label == label)
-            .select(vectorized.idx, vectorized.features, vectorized.label)
-            .collect()
-        ]
 
     def sk_train_dataloader(self) -> DataLoader:
         return DataLoader(

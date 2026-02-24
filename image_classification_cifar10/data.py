@@ -326,7 +326,7 @@ class CIFAR10DataModule(LightningDataModule):
         self,
         indices: list[int],
         label: str | None = None,
-    ) -> list[Sample]:
+    ) -> list[np.ndarray]:
         vectorized = pxt.get_table(self.gold_splitter.descriptor.table_path)
         assert vectorized is not None
         query = vectorized.idx.isin(indices)
@@ -338,45 +338,29 @@ class CIFAR10DataModule(LightningDataModule):
             for row in vectorized.where(query).select(vectorized.features).collect()
         ]
 
-    def get_gold_train_features(self, label: str | None = None) -> list[Sample]:
+    def get_gold_train_features(self, label: str | None = None) -> list[np.ndarray]:
         return self._get_features_by_indices(
             self.gold_train_indices,
             label,
         )
 
-    def get_gold_val_features(self, label: str | None = None) -> list[Sample]:
+    def get_gold_val_features(self, label: str | None = None) -> list[np.ndarray]:
         return self._get_features_by_indices(
             self.gold_val_indices,
             label,
         )
 
-    def get_sk_train_features(self, label: str | None = None) -> list[Sample]:
+    def get_sk_train_features(self, label: str | None = None) -> list[np.ndarray]:
         return self._get_features_by_indices(
             self.sk_train_indices,
             label,
         )
 
-    def get_sk_val_features(self, label: str | None = None) -> list[Sample]:
+    def get_sk_val_features(self, label: str | None = None) -> list[np.ndarray]:
         return self._get_features_by_indices(
             self.sk_val_indices,
             label,
         )
-
-    def get_training_samples(self, label: str | None = None) -> list[Sample]:
-        vectorized = pxt.get_table(self.gold_splitter.descriptor.table_path)
-        assert vectorized is not None
-
-        return [
-            Sample(
-                dataset_idx=row["idx"],
-                features=row["features"],
-                label=row["label"],
-                training_set=None,
-            )
-            for row in vectorized.where(vectorized.label == label)
-            .select(vectorized.idx, vectorized.features, vectorized.label)
-            .collect()
-        ]
 
     def sk_train_dataloader(self) -> DataLoader:
         return DataLoader(
