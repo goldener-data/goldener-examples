@@ -15,18 +15,18 @@ import torchvision
 from torchvision.transforms.v2 import (
     Compose,
     ColorJitter,
-    ToTensor,
     Resize,
+    ToImage,
 )
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
 import pixeltable as pxt
 from goldener.split import GoldSplitter
-from goldener.vision.transform import PatchifyImageMask
 from image_segmentation_pascal_voc.utils import (
     get_gold_splitter,
     get_gold_descriptor,
     PASCAL_VOC_PREPROCESS,
+    collate_pascal_voc,
 )
 
 logger = getLogger(__name__)
@@ -198,9 +198,10 @@ class VOCSegmentationDataModule(LightningDataModule):
         # No normalization should be applied to segmentation masks
         self.mask_transform = Compose(
             [
-                ToTensor(),
+                ToImage(),
                 Resize(
-                    224, interpolation=torchvision.transforms.InterpolationMode.NEAREST
+                    (224, 224),
+                    interpolation=torchvision.transforms.InterpolationMode.NEAREST,
                 ),
             ]
         )
@@ -250,15 +251,11 @@ class VOCSegmentationDataModule(LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         if stage == "fit" or stage is None:
-            mask_transform = Compose(
-                self.mask_transform.transforms + [PatchifyImageMask(16)]
-            )
-
             val_dataset = GoldPascalVOC2012Segmentation(
                 root=self.data_dir,
                 split="train",
-                transform=self.transform,
-                target_transform=mask_transform,
+                transform=PASCAL_VOC_PREPROCESS,
+                target_transform=self.mask_transform,
                 override=False,
                 count=self.train_count,
                 random_state=self.random_state,
@@ -320,6 +317,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
             generator=torch.Generator().manual_seed(self.random_state),
+            collate_fn=collate_pascal_voc,
         )
 
     def sk_val_dataloader(self) -> DataLoader:
@@ -330,6 +328,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
+            collate_fn=collate_pascal_voc,
         )
 
     def gold_train_dataloader(self) -> DataLoader:
@@ -341,6 +340,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
             generator=torch.Generator().manual_seed(self.random_state),
+            collate_fn=collate_pascal_voc,
         )
 
     def gold_val_dataloader(self) -> DataLoader:
@@ -351,6 +351,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
+            collate_fn=collate_pascal_voc,
         )
 
     def test_dataloader(self) -> DataLoader:
@@ -361,4 +362,5 @@ class VOCSegmentationDataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=True if self.num_workers > 0 else False,
             pin_memory=True,
+            collate_fn=collate_pascal_voc,
         )

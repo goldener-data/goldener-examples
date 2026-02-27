@@ -2,7 +2,7 @@ defaults:
   - _self_
 
 gold_splitter:
-  min_pxt_insert_size: 1000
+  min_pxt_insert_size: 20000
   batch_size: 32
   num_workers: 8
   table_name: voc_seg_dinov3small_224
@@ -11,17 +11,17 @@ gold_splitter:
 
 exp:
   split_method: gold  # Options: random, gold, or all
-  model: unet # unet, vit_seg
+  model: unet # deeplab, fpn
   val_ratio: 0.3
-  max_epochs: 30
-  learning_rate: 0.001
+  max_epochs: 50
+  learning_rate: 0.0001
   batch_size: 16
   validate_on_test: True
   random_state: 42
   checkpoint: checkpoints
 
 data:
-  cache: .data
+  cache: /home/ubuntu/gold-splitter-examples/image_segmentation_pascal_voc/.data
   remove_ratio: null
   drop_duplicate_table: True
   duplicate_table_path: null

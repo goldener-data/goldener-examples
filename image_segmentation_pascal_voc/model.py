@@ -5,17 +5,46 @@ from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 import torch.nn.functional as F
 from torchmetrics.classification import MulticlassJaccardIndex
 
+from image_segmentation_pascal_voc.utils import (
+    transform_rgb_mask_to_class_mask,
+    transform_segmentation_logits_to_rgb_preds,
+    transform_rgb_mask_to_mono_mask,
+)
+
 
 class VOCSegmentationLightningModule(LightningModule):
+    RGB_TO_CLASS_IDX = {
+        (0, 0, 0): 0,  # background
+        (128, 0, 0): 1,
+        (0, 128, 0): 2,
+        (128, 128, 0): 3,
+        (0, 0, 128): 4,
+        (128, 0, 128): 5,
+        (0, 128, 128): 6,
+        (128, 128, 128): 7,
+        (64, 0, 0): 8,
+        (192, 0, 0): 9,
+        (64, 128, 0): 10,
+        (192, 128, 0): 11,
+        (64, 0, 128): 12,
+        (192, 0, 128): 13,
+        (64, 128, 128): 14,
+        (192, 128, 128): 15,
+        (0, 64, 0): 16,
+        (128, 64, 0): 17,
+        (0, 192, 0): 18,
+        (128, 192, 0): 19,
+        (0, 64, 128): 20,
+        (224, 224, 192): 0,  # void
+    }
+
     def __init__(
         self,
         learning_rate: float = 0.001,
         model_type: str = "unet",
-        num_classes: int = 21,  # Pascal VOC has 21 classes (20 objects + background)
     ) -> None:
         super().__init__()
         self.learning_rate = learning_rate
-        self.num_classes = num_classes
 
         self.model: torch.nn.Module
         self._setup_model(model_type)
@@ -23,20 +52,17 @@ class VOCSegmentationLightningModule(LightningModule):
         self.save_hyperparameters()
 
     def _setup_model(self, model_type: str) -> None:
-        if model_type == "unet":
-            self.model = smp.Unet(
-                encoder_name="tu-convnext_tiny",
-                encoder_weights="imagenet",
+        if model_type == "deeplab":
+            self.model = smp.DeepLabV3Plus(
+                encoder_name="mobilenet_v2",
                 in_channels=3,
-                classes=20,
+                classes=21,
             )
-        elif model_type == "vit":
-            # Segformer-like architecture with ViT backbone and simple segmentation head
-            self.model = smp.Segformer(
-                encoder_name="resnet34",
-                encoder_weights="imagenet",
+        elif model_type == "fpn":
+            self.model = smp.FPN(
+                encoder_name="mobilenet_v2",
+                classes=21,
                 in_channels=3,
-                classes=20,
             )
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
@@ -53,36 +79,36 @@ class VOCSegmentationLightningModule(LightningModule):
         return self.model(x)
 
     def on_train_start(self) -> None:
-        self.train_iou = MulticlassJaccardIndex(num_classes=self.num_classes)
+        self.train_iou = MulticlassJaccardIndex(num_classes=21).to(self.device)
 
     def _step(
         self,
-        batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        batch: dict[str, torch.Tensor | list[list[str]] | list[int]],
         iou_metric: MulticlassJaccardIndex,
         prefix: str,
     ) -> torch.Tensor:
-        x, y, _ = batch
+        x = batch["image"]
+        assert isinstance(x, torch.Tensor)
+        y = batch["mask"]
+        assert isinstance(y, torch.Tensor)
 
-        # Get predictions
         logits = self(x)
 
-        # Convert mask to class indices (assuming grayscale mask with class values)
-        y = y.long()  # Remove channel dimension and convert to long
+        seg_y = transform_rgb_mask_to_class_mask(y, self.RGB_TO_CLASS_IDX)
 
-        # Compute loss
-        loss = F.cross_entropy(
-            logits, y, ignore_index=255
-        )  # 255 is commonly used for void/ignore class
+        loss = F.cross_entropy(logits, seg_y)
         self.log(f"{prefix}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
-        # Compute pixel accuracy
-        preds = torch.argmax(logits, dim=1)
-        valid_mask = y != 255
-        acc = (preds[valid_mask] == y[valid_mask]).float().mean()
+        preds = transform_segmentation_logits_to_rgb_preds(
+            logits, self.RGB_TO_CLASS_IDX
+        )
+        acc = (preds == y).float().mean()
         self.log(f"{prefix}_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
-        # Compute IoU (Jaccard Index)
-        iou_metric.update(preds, y)
+        iou_metric.update(
+            transform_rgb_mask_to_mono_mask(preds, self.RGB_TO_CLASS_IDX),
+            transform_rgb_mask_to_mono_mask(y, self.RGB_TO_CLASS_IDX),
+        )
 
         return loss
 
@@ -96,7 +122,9 @@ class VOCSegmentationLightningModule(LightningModule):
         iou_metric.reset()
 
     def training_step(
-        self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+        self,
+        batch: dict[str, torch.Tensor | list[list[str]] | list[int]],
+        batch_idx: int,
     ) -> STEP_OUTPUT:
         return self._step(
             batch=batch,
@@ -108,34 +136,36 @@ class VOCSegmentationLightningModule(LightningModule):
         self._compute_iou_and_log(self.train_iou, "train")
 
     def on_validation_epoch_start(self) -> None:
-        self.val_iou = MulticlassJaccardIndex(num_classes=self.num_classes)
+        self.val_iou = MulticlassJaccardIndex(num_classes=21).to(self.device)
         if self.has_test_as_val:
-            self.test_as_val_iou = MulticlassJaccardIndex(num_classes=self.num_classes)
+            self.test_as_val_iou = MulticlassJaccardIndex(num_classes=21).to(
+                self.device
+            )
 
     def validation_step(
         self,
-        batch: dict[str, tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
-        | tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        batch: dict[str, dict[str, torch.Tensor | list[list[str]] | list[int]]]
+        | dict[str, torch.Tensor | list[list[str]] | list[int]],
         batch_idx: int,
     ) -> STEP_OUTPUT:
-        if isinstance(batch, dict):
+        if "val" in batch:
             val_batch = batch["val"]
             test_batch = batch["test_as_val"] if "test_as_val" in batch else None
         else:
-            val_batch = batch
+            val_batch = batch  # type: ignore[assignment]
             test_batch = None
 
         loss = None
         if val_batch is not None:
             loss = self._step(
-                batch=val_batch,
+                batch=val_batch,  # type: ignore[arg-type]
                 iou_metric=self.val_iou,
                 prefix="val",
             )
 
         if test_batch is not None:
             self._step(
-                batch=test_batch,
+                batch=test_batch,  # type: ignore[arg-type]
                 iou_metric=self.test_as_val_iou,
                 prefix="test_as_val",
             )
@@ -149,10 +179,12 @@ class VOCSegmentationLightningModule(LightningModule):
             self._compute_iou_and_log(self.test_as_val_iou, "test_as_val")
 
     def on_test_start(self) -> None:
-        self.test_iou = MulticlassJaccardIndex(num_classes=self.num_classes)
+        self.test_iou = MulticlassJaccardIndex(num_classes=21).to("cuda")
 
     def test_step(
-        self, batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+        self,
+        batch: dict[str, torch.Tensor | list[list[str]] | list[int]],
+        batch_idx: int,
     ) -> STEP_OUTPUT:
         return self._step(
             batch=batch,
