@@ -11,10 +11,10 @@ from goldener import (
     GoldSKLearnClusteringTool,
     GoldClusterizer,
     GoldDescriptor,
-    TorchGoldFeatureExtractor,
-    TorchGoldFeatureExtractorConfig,
+    TorchGoldEmbeddingTool,
+    TorchGoldEmbeddingToolConfig,
     GoldSelector,
-    GoldGreedyKCenterSelection,
+    GoldGreedyKCenterSelectionTool,
     GoldSet,
     GoldSplitter,
 )
@@ -77,8 +77,8 @@ def get_gold_descriptor(
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
     )
 
-    extractor = TorchGoldFeatureExtractor(
-        TorchGoldFeatureExtractorConfig(
+    embedder = TorchGoldEmbeddingTool(
+        TorchGoldEmbeddingToolConfig(
             model=timm.create_model(
                 model_name="vit_small_patch16_dinov3.lvd1689m",
                 pretrained=True,
@@ -96,7 +96,7 @@ def get_gold_descriptor(
 
     return GoldDescriptor(
         table_path=table_name,
-        extractor=extractor,
+        embedder=embedder,
         vectorizer=get_vit_patch_tokens_vectorizer(
             transform_y=patchify_mask.transform,
             n_random=5,
@@ -162,7 +162,7 @@ def get_gold_splitter(
 
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
-        selection_tool=GoldGreedyKCenterSelection(
+        selection_tool=GoldGreedyKCenterSelectionTool(
             device="cuda:0" if torch.cuda.is_available() else "cpu"
         ),
         reducer=None,
