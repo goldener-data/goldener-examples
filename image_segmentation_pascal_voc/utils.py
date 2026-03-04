@@ -89,7 +89,7 @@ def get_gold_descriptor(
         )
     )
 
-    # For segmentation, we want to extract features from all patches, not just the class token
+    # For segmentation, we want to extract embeddings from all patches, not just the class token
     # We'll use ALL filter location to get all patch embeddings (excluding class token)
     # Then we can filter based on the segmentation mask
     patchify_mask = PatchifyImageMask(patch_size=16, match_ratio=0.85)
@@ -143,7 +143,7 @@ def get_gold_splitter(
             clustering_tool=GoldSKLearnClusteringTool(
                 KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
             ),
-            vectorized_key="features",
+            vectorized_key="embeddings",
             min_pxt_insert_size=min_pxt_insert_size,
             batch_size=batch_size,
             num_workers=num_workers,
@@ -166,7 +166,7 @@ def get_gold_splitter(
             device="cuda:0" if torch.cuda.is_available() else "cpu"
         ),
         reducer=None,
-        vectorized_key="features",
+        vectorized_key="embeddings",
         label_key="labels",
         to_keep_schema=to_keep_schema,
         batch_size=batch_size,

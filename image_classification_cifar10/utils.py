@@ -105,7 +105,7 @@ def get_gold_splitter(
             clustering_tool=GoldSKLearnClusteringTool(
                 KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
             ),
-            vectorized_key="features",
+            vectorized_key="embeddings",
             min_pxt_insert_size=min_pxt_insert_size,
             batch_size=batch_size,
             num_workers=num_workers,
@@ -127,7 +127,7 @@ def get_gold_splitter(
             device="cuda:0" if torch.cuda.is_available() else "cpu"
         ),
         reducer=None,
-        vectorized_key="features",
+        vectorized_key="embeddings",
         label_key="label",
         to_keep_schema=to_keep_schema,
         batch_size=batch_size,
