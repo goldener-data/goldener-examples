@@ -12,8 +12,10 @@ patches corresponding to the segmentation mask (ground truth/target) rather than
 import os
 import time
 from logging import getLogger, WARNING
+from pathlib import Path
 
 import hydra
+import mlflow
 from omegaconf import DictConfig
 import pixeltable as pxt
 from lightning import Trainer, seed_everything
@@ -46,6 +48,28 @@ def run_experiment(
     model = VOCSegmentationLightningModule(
         learning_rate=cfg.exp.learning_rate, model_type=model_type
     )
+
+    if cfg.exp.load_from_run_id:
+        mlflow_client = mlflow.MlflowClient(
+            tracking_uri=cfg.logging.mlflow_tracking_uri
+        )
+        run = mlflow_client.get_run(cfg.exp.load_from_run_id)
+        artifact_path = Path(run.info.artifact_uri.replace("file://", ""))
+        checkpoint_path = artifact_path / "voc-seg-best/voc-seg-best.ckpt"
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(
+                f"Checkpoint not found at {checkpoint_path} for run ID {cfg.exp.load_from_run_id}"
+            )
+        logger.info(
+            f"Loading model from checkpoint at {checkpoint_path} for run ID {cfg.exp.load_from_run_id}"
+        )
+        model = VOCSegmentationLightningModule.load_from_checkpoint(
+            str(checkpoint_path),
+            weights_only=False,
+            hparams_file=artifact_path / "voc-seg-best/metadata.yaml",
+            learning_rate=cfg.exp.learning_rate,
+            model_type=model_type,
+        )
 
     mlflow_logger = MLFlowLogger(
         experiment_name=f"{cfg.logging.mlflow_experiment_name}_{data_module.settings_as_str}",
@@ -95,7 +119,7 @@ def run_experiment(
     checkpoint_callback = ModelCheckpoint(
         monitor="val_iou",
         dirpath=f"{cfg.exp.checkpoint}/{mlflow_logger.run_id}/",
-        filename="voc-seg-{epoch:02d}-{val_iou:.4f}",
+        filename="voc-seg-best",
         save_top_k=1,
         mode="max",
         verbose=True,
@@ -134,16 +158,21 @@ def run_experiment(
         data_module.setup(stage="test")
         val_dataloaders["test_as_val"] = data_module.test_dataloader()
 
-    trainer.fit(
-        model,
-        train_dataloaders=train_dataloader,
-        val_dataloaders=CombinedLoader(val_dataloaders, mode="max_size"),
-    )
+    if cfg.exp.load_from_run_id is None:
+        trainer.fit(
+            model,
+            train_dataloaders=train_dataloader,
+            val_dataloaders=CombinedLoader(val_dataloaders, mode="max_size"),
+        )
 
-    if not cfg.exp.validate_on_test:
+    if not cfg.exp.validate_on_test or cfg.exp.load_from_run_id is not None:
         data_module.setup(stage="test")
 
-    trainer.test(model, data_module, ckpt_path="best")
+    trainer.test(
+        model,
+        data_module,
+        ckpt_path="best" if cfg.exp.load_from_run_id is None else None,
+    )
 
     logger.info(
         f"Run completed for {split_method.upper()} split method and {model_type.upper()} model"

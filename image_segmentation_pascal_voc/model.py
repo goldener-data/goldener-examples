@@ -162,7 +162,7 @@ class VOCSegmentationLightningModule(LightningModule):
     def on_train_epoch_end(self) -> None:
         self._compute_iou_and_log(self.train_iou, "train")
         self._compute_iou_and_log(self.train_pc_iou, "train")
-        self._compute_iou_and_log(self.train_micro_iou, "train")
+        self._compute_iou_and_log(self.train_micro_iou, "train_micro")
 
     def on_validation_epoch_start(self) -> None:
         self.val_iou = MulticlassJaccardIndex(num_classes=21).to(self.device)
@@ -221,10 +221,12 @@ class VOCSegmentationLightningModule(LightningModule):
     def on_validation_epoch_end(self) -> None:
         self._compute_iou_and_log(self.val_iou, "val")
         self._compute_iou_and_log(self.val_pc_iou, "val")
+        self._compute_iou_and_log(self.val_micro_iou, "val_micro")
 
         if self.has_test_as_val:
             self._compute_iou_and_log(self.test_as_val_iou, "test_as_val")
             self._compute_iou_and_log(self.test_as_val_pc_iou, "test_as_val")
+            self._compute_iou_and_log(self.test_as_val_micro_iou, "test_as_val_micro")
 
     def on_test_start(self) -> None:
         self.test_iou = MulticlassJaccardIndex(num_classes=21).to("cuda")
@@ -255,11 +257,11 @@ class VOCSegmentationLightningModule(LightningModule):
         )
         self._compute_iou_and_log(
             iou_metric=self.test_pc_iou,
-            prefix="test",
+            prefix="test_pc",
         )
         self._compute_iou_and_log(
             iou_metric=self.test_micro_iou,
-            prefix="test",
+            prefix="test_micro",
         )
 
     def configure_optimizers(

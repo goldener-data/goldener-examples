@@ -19,6 +19,7 @@ exp:
   validate_on_test: True
   random_state: 42
   checkpoint: checkpoints
+  load_from_run_id: null
 
 data:
   cache: /home/ubuntu/gold-splitter-examples/image_segmentation_pascal_voc/.data
