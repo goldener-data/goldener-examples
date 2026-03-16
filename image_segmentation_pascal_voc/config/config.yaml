@@ -7,13 +7,13 @@ gold_splitter:
   num_workers: 8
   table_name: voc_seg_dinov3small_224
   update_selection: True
-  n_clusters: 50
+  n_clusters: 0
 
 exp:
   split_method: gold  # Options: random, gold, or all
   model: unet # deeplab, fpn
   val_ratio: 0.3
-  max_epochs: 50
+  max_epochs: 60
   learning_rate: 0.0001
   batch_size: 16
   validate_on_test: True
@@ -40,9 +40,6 @@ logging:
 debug_count:
   test_count: null  # Set to a number (e.g., 5) to limit validation/test batches for debugging. null = no limit
   train_count: null  # Set to a number (e.g., 10) to limit training batches for debugging. null = no limit
-
-
-
 
 hydra:
   job_logging:

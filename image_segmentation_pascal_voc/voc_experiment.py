@@ -28,8 +28,7 @@ from image_segmentation_pascal_voc.model import VOCSegmentationLightningModule
 
 
 logger = getLogger(__name__)
-
-logging.getLogger("sqlalchemy.engine").setLevel(logging.CRITICAL)
+logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
 
 
 def run_experiment(

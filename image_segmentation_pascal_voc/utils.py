@@ -6,11 +6,11 @@ import pixeltable as pxt
 import hydra
 import timm
 import torch
+from goldener.select import DistanceType
 from goldener.torch_utils import get_unique_values_in_tensor
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from sklearn.cluster import KMeans
-from goldener.vision.transform import PatchifyImageMask
-from goldener.vision.vectorizers import get_vit_patch_tokens_vectorizer
+from goldener.vision.vectorizers import get_vit_class_token_vectorizer
 from goldener import (
     GoldSKLearnClusteringTool,
     GoldClusterizer,
@@ -84,27 +84,18 @@ def get_gold_descriptor(
     embedder = GoldTorchEmbeddingTool(
         GoldTorchEmbeddingToolConfig(
             model=timm.create_model(
-                model_name="vit_small_patch16_dinov3.lvd1689m",
+                model_name="vit_large_patch16_dinov3.lvd1689m",
                 pretrained=True,
                 img_size=224,
                 device=device,
             ),
             layers=[
-                "blocks.11",
+                "blocks.23",
             ],
         )
     )
 
-    # For segmentation, we want to extract embeddings from all patches, not just the class token
-    # We'll use ALL filter location to get all patch embeddings (excluding class token)
-    # Then we can filter based on the segmentation mask
-    patchify_mask = PatchifyImageMask(patch_size=16, match_ratio=0.85)
-
-    tensor_vectorizer = get_vit_patch_tokens_vectorizer(
-        transform_y=patchify_mask.transform,
-        generator=torch.Generator().manual_seed(42),
-        n_random=5,
-    )
+    tensor_vectorizer = get_vit_class_token_vectorizer()
 
     return GoldDescriptor(
         table_path=table_name,
@@ -113,11 +104,9 @@ def get_gold_descriptor(
         collate_fn=collate_pascal_voc,
         to_keep_schema=to_keep_schema,
         data_key="image",
-        target_key="mask",
-        target_to_label=target_to_label,
         label_key="labels",
-        exclude_full_zero_target=True,
         exclude_labels={"void", "background"},
+        merge_multilabels=True,
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=batch_size,
         num_workers=num_workers,
@@ -171,7 +160,8 @@ def get_gold_splitter(
     selector = GoldSelector(
         table_path=f"{table_name}_selection",
         selection_tool=GoldGreedyKCenterSelectionTool(
-            device="cuda:0" if torch.cuda.is_available() else "cpu"
+            device="cuda:0" if torch.cuda.is_available() else "cpu",
+            distance=DistanceType.COSINE,
         ),
         reducer=None,
         vectorized_key="embeddings",
