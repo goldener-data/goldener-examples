@@ -11,7 +11,7 @@ gold_splitter:
   n_clusters: 50
 
 exp:
-  split_method: gold  # Options: random, gold, or all
+  split_method: all  # Options: random, gold, or all
   model: cnn  # Options: cnn, bert
   val_ratio: 0.2
   max_epochs: 10
