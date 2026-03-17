@@ -27,7 +27,7 @@ as well as the data split method to use and the settings for the GoldSplitter.
 training images is used for training/validation. Duplication of some samples is as well possible.
 
 - **VOCSegmentationLightningModule**: A specific Pytorch Lightning LightningModule allowing to train and evaluate different
-image segmentation models (U-Net, ViT-based segmentation) for the Pascal VOC dataset.
+image segmentation models (deeplab and fpn segmentation models) for the Pascal VOC dataset.
 
 - **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
 testing loops. It checkpoints the best model based on validation IoU metric.
@@ -63,21 +63,20 @@ Then navigate to `http://localhost:5000` in your browser.
     dining table, dog, horse, motorbike, person, potted plant, sheep, sofa, train, tv/monitor
 - **Training samples**: 1,464 images with segmentation masks
 - **Validation samples**: 1,449 images with segmentation masks
-- **Image size**: Variable, resized to 448×448 for training
+- **Image size**: Variable, resized to 224×224 for training
 
 
 ### Training Configuration
 
 - **Optimizer**: Adam
-  - Learning rate: 0.001 (default, configurable)
+  - Learning rate: 0.0001 (default, configurable)
   - Weight decay: 0 (no L2 regularization)
 
 - **Loss Function**: CrossEntropyLoss
   - Applied to pixel-wise predictions
-  - Ignore index: 255 (void/unlabeled pixels)
 
 - **Batch Size**: 16 (default, configurable)
-- **Max Epochs**: 30 (default, configurable)
+- **Max Epochs**: 60 (default, configurable)
 
 ### Evaluation Metrics
 
@@ -109,14 +108,12 @@ checkpoint_callback = ModelCheckpoint(
 ### Random Split (Baseline)
 
 ```python
-from sklearn.model_selection import train_test_split
+from image_segmentation_pascal_voc.utils import multilabel_iterative_train_test_split
 
-train_indices, val_indices = train_test_split(
+train_indices, val_indices = multilabel_iterative_train_test_split(
     indices,
     test_size=0.2,
     random_state=42,
-    shuffle=True,
-    stratify=targets,
 )
 ```
 
