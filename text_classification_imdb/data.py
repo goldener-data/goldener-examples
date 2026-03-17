@@ -1,6 +1,4 @@
-from dataclasses import dataclass
 from logging import getLogger
-from typing import Literal
 
 import torch
 from datasets import load_dataset
@@ -15,14 +13,6 @@ from goldener.split import GoldSplitter
 from text_classification_imdb.utils import get_gold_splitter
 
 logger = getLogger(__name__)
-
-
-@dataclass
-class TextSample:
-    dataset_idx: int
-    features: list[float]
-    label: str
-    training_set: Literal["train", "val"] | None = None
 
 
 class IMDbDataset(Dataset):
