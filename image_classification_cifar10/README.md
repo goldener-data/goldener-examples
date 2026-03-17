@@ -1,19 +1,16 @@
 # CIFAR-10 Split Comparison Experiment
 
 This experiment compares the two data splitting strategies for training
-for different image classification model type on the CIFAR-10 dataset.
+for different image classification model type on the [CIFAR-10 dataset](https://www.cs.toronto.edu/~kriz/cifar.html).
 
 
 ## Table of Contents
 
-- [Main components](#main-components)
+- [Main Components](#main-components)
 - [Quick Start](#quick-start)
 - [Technical Details](#technical-details)
 - [Split Strategies](#split-strategies)
 - [Viewing Results](#viewing-results)
-- [Output Interpretation](#output-interpretation)
-- [Extending the Experiment](#extending-the-experiment)
-- [References](#references)
 
 
 ## Main components
@@ -22,7 +19,7 @@ for different image classification model type on the CIFAR-10 dataset.
 It allows to specify the hyperparameters and logging parameter for the model training/evaluation
 but as well as the data split method to use and the settings for the GoldSplitter.
 
-- **CIFAR10DataModule**: A specific Pytorch Datamodule allowing to load data from the CIFAR-10 dataset from torchvision
+- **CIFAR10DataModule**: A specific Pytorch Lightning Datamodule allowing to load data from the CIFAR-10 dataset from torchvision
 (50,000 training images, 10,000 test images). Depending on the configuration, only a subset of the
 training images is used for training/validation. Duplication of some samples is as well possible.
 

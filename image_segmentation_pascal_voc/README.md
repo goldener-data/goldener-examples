@@ -1,19 +1,15 @@
 # Pascal VOC Segmentation Split Comparison Experiment
 
 This experiment compares two data splitting strategies for training
-image segmentation models on the Pascal VOC 2012 dataset.
+image segmentation models on the [Pascal VOC 2012 dataset](https://www.robots.ox.ac.uk/~vgg/projects/pascal/VOC/voc2012/index.html).
 
 ## Table of Contents
 
 - [Main Components](#main-components)
 - [Quick Start](#quick-start)
 - [Technical Details](#technical-details)
-- [Key Differences from Image Classification](#key-differences-from-image-classification)
 - [Split Strategies](#split-strategies)
 - [Viewing Results](#viewing-results)
-- [Output Interpretation](#output-interpretation)
-- [Extending the Experiment](#extending-the-experiment)
-- [References](#references)
 
 
 ## Main Components
@@ -22,7 +18,7 @@ image segmentation models on the Pascal VOC 2012 dataset.
 It allows specifying the hyperparameters and logging parameters for the model training/evaluation
 as well as the data split method to use and the settings for the GoldSplitter.
 
-- **VOCSegmentationDataModule**: A specific Pytorch DataModule allowing to load data from the Pascal VOC 2012 dataset
+- **VOCSegmentationDataModule**: A specific Pytorch Lightning DataModule allowing to load data from the Pascal VOC 2012 dataset
 (1,464 training images, 1,449 validation images). Depending on the configuration, only a subset of the
 training images is used for training/validation. Duplication of some samples is as well possible.
 

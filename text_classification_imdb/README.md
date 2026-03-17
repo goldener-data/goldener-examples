@@ -1,24 +1,33 @@
 # Text Classification: IMDb Movie Reviews
 
 This example compares two data splitting strategies for binary sentiment classification on the
-[IMDb Large Movie Review Dataset](https://huggingface.co/datasets/imdb):
+[IMDb Large Movie Review Dataset](https://huggingface.co/datasets/imdb).
 
-1. **Random Split**: Traditional stratified random split using scikit-learn.
-2. **Smart Split**: Intelligent split using GoldSplitter from the Goldener library.
+## Table of Contents
 
-## Models
+- [Main Components](#main-components)
+- [Quick Start](#quick-start)
+- [Technical Details](#technical-details)
+- [Split Strategies](#split-strategies)
+- [Viewing Results](#viewing-results)
 
-| Name | Architecture | Description |
-|------|-------------|-------------|
-| `cnn` | 1D CNN | Embedding layer → parallel Conv1D with kernel sizes 3/4/5 → adaptive max-pool → dropout → linear |
-| `bert` | BERT-Base | `bert-base-uncased` with a linear classification head on the CLS token |
+## Main Components
 
-Both models share the same **WordPiece** tokenizer (`bert-base-uncased`).
+- **Configuration**: The experiment is configured from a config file loaded from Hydra for flexible configuration management.
+It allows specifying the hyperparameters and logging parameters for the model training/evaluation
+as well as the data split method to use and the settings for the GoldSplitter.
 
-## Metrics
+- **IMDbDataModule**: A specific Pytorch Lightning DataModule allowing to load data from the
+IMDb Large Movie Review dataset (50k movie reviews). Depending on the configuration, only a subset of the
+training reviews is used for training/validation. Duplication of some samples is as well possible.
 
-- **BinaryAUROC** – area under the ROC curve for binary classification.
-- **Accuracy** – fraction of correctly classified reviews.
+- **IMDbLightningModule**: A specific Pytorch Lightning LightningModule allowing to train and evaluate different
+text classification models (custom CNN, Bert-based classifier) for the IMDb Large Movie Review dataset.
+
+- **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
+testing loops. It checkpoints the best model based on validation IoU metric.
+
+- **Logging**: MLFlow for experiment tracking allowing to compare the different splitting strategies based on the logged metrics.
 
 ## Quick Start
 
@@ -26,57 +35,118 @@ Both models share the same **WordPiece** tokenizer (`bert-base-uncased`).
 # Install dependencies (from repo root)
 uv sync --extra text
 
-# Run experiment (defaults to CNN with GoldSplitter)
+# Make sure you're in the experiment directory
 cd text_classification_imdb
+# Run both split methods (uses default config)
 uv run python imdb_experiment.py
 
-# Run with BERT model
-uv run python imdb_experiment.py exp.model=bert exp.learning_rate=2e-5
-
-# Compare both split strategies with both models
-uv run python imdb_experiment.py exp.split_method=all exp.model=cnn
-uv run python imdb_experiment.py exp.split_method=all exp.model=bert exp.learning_rate=2e-5
+# View results
+mlflow ui
 ```
 
-## Configuration
+Then navigate to `http://localhost:5000` in your browser.
 
-The experiment is configured via [Hydra](https://hydra.cc). Key parameters in `config/config.yaml`:
+## Technical Details
 
-| Section | Key | Default | Description |
-|---------|-----|---------|-------------|
-| `exp` | `model` | `cnn` | Model architecture (`cnn` or `bert`) |
-| `exp` | `split_method` | `gold` | Split strategy (`random`, `gold`, or `all`) |
-| `exp` | `val_ratio` | `0.2` | Fraction of training data used for validation |
-| `exp` | `max_epochs` | `10` | Number of training epochs |
-| `exp` | `learning_rate` | `0.001` | Optimizer learning rate |
-| `data` | `tokenizer_name` | `bert-base-uncased` | HuggingFace tokenizer (WordPiece) |
-| `data` | `max_length` | `256` | Maximum token sequence length |
-| `gold_splitter` | `n_clusters` | `50` | Number of k-means clusters in GoldSplitter |
-| `gold_splitter` | `pretrained_model` | `bert-base-uncased` | BERT model used for feature extraction |
+### Dataset: Pascal VOC 2012
 
-## Feature Extraction for GoldSplitter
+- **Task**: Binary sentiment classification (positive vs negative reviews)
+- **Classes**: 2 (positive, negative)
+- **Training samples**: 25,000 reviews (12,500 positive, 12,500 negative)
+- **Test samples**: 25,000 reviews (12,500 positive, 12,500 negative)
+- **Input**: raw text reviews (tokenized and converted to token IDs for model input)
 
-GoldSplitter needs dense vector representations to measure dataset coverage.
-For this text example, each review is embedded by passing the tokenized text through a
-frozen `bert-base-uncased` model and extracting the **CLS token** hidden state from the
-last encoder layer. This produces a 768-dimensional feature vector per sample.
+### Training Configuration
 
-## Run Scripts
+- **Optimizer**: AdamW
+  - Learning rate: 0.001 (default, configurable)
+  - Weight decay: 0 (no L2 regularization)
 
-Pre-built shell scripts are provided in the `run/` directory:
+- **Loss Function**: CrossEntropyLoss for binary classification
 
+- **Batch Size**: 32 (default, configurable)
+- **Max Epochs**: 10 (default, configurable)
+
+### Evaluation Metrics
+
+**Primary Metric (for model selection)**:
+- **AUROC (Area Under the ROC curve)**: measures the model's ability to distinguish between positive and negative reviews
+  - Task: Binary classification
+  - Used for: Model checkpoint selection (best validation AUROC)
+
+**Secondary Metrics**:
+- **Accuracy**: Percentage of correct predictions
+
+All metrics are computed and logged for both training and validation sets at each epoch.
+
+### Model Selection
+
+The best model is selected based on **maximum validation AUROC**:
+
+```python
+checkpoint_callback = ModelCheckpoint(
+    monitor='val_auroc',
+    mode='max',
+    save_top_k=1
+)
+```
+
+## Split Strategies
+
+### Random Split (Baseline)
+
+```python
+from sklearn.model_selection import train_test_split
+
+train_indices, val_indices = train_test_split(
+    indices,
+    test_size=0.2,
+    random_state=42,
+    shuffle=True,
+    stratify=targets,
+)
+```
+
+**Characteristics**:
+- Uniform probability for each sample
+- Stratified selection to preserve class proportions per split
+- Standard practice in ML
+- Simple and fast
+
+### GoldSplitter (Smart Split)
+
+The smart split is done from the class token of the Dinov3 ViT-S model.
+
+```python
+from image_classification_cifar10.utils import get_gold_splitter
+
+gold_splitter = get_gold_splitter(cfg.gold_splitter)
+split_table = gold_splitter.split_in_table(dataset)
+splits = gold_splitter.get_split_indices(
+    split_table, selection_key="selected", idx_key="idx"
+)
+train_indices = np.array(list(splits["train"]))
+val_indices = np.array(list(splits["val"]))
+```
+
+**Characteristics**:
+- Considers class labels for balanced splits
+- Aims for optimal distribution
+- May lead to more representative validation sets
+- Potentially better generalization
+
+### Evaluation Criteria
+
+Compare the two methods on:
+- **Convergence Speed**: Epochs to reach best performance
+- **Stability**: Variance in validation metrics across epochs
+- **Test Performance**: Final performance on held-out test set
+
+## Viewing Results
+
+After running the experiment, start the MLFlow UI:
 ```bash
-# CNN model – multiple random-split seeds for statistical comparison
-bash run/imdb_cnn.sh
-
-# BERT model – multiple random-split seeds for statistical comparison
-bash run/imdb_bert.sh
+mlflow ui
 ```
 
-## Experiment Tracking
-
-Results are logged with [MLflow](https://mlflow.org).  After running experiments, launch the UI:
-
-```bash
-mlflow ui --backend-store-uri mlruns
-```
+Then open `http://localhost:5000` in your browser to compare results between split methods.
