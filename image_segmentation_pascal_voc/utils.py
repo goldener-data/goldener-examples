@@ -75,7 +75,6 @@ def get_gold_descriptor(
     batch_size: int,
     num_workers: int,
     to_keep_schema: dict,
-    target_to_label: dict[tuple[int, int, int], str],
 ) -> GoldDescriptor:
     device = (
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
@@ -118,7 +117,6 @@ def get_gold_splitter(
     splitter_cfg: DictConfig,
     name_prefix: str,
     val_ratio: float,
-    target_to_label: dict[tuple[int, int, int], str],
     max_batches: int | None = None,
 ) -> GoldSplitter:
     splitter_config = hydra.utils.instantiate(splitter_cfg)
@@ -154,7 +152,6 @@ def get_gold_splitter(
         batch_size=batch_size,
         num_workers=num_workers,
         to_keep_schema=to_keep_schema,
-        target_to_label=target_to_label,
     )
 
     selector = GoldSelector(

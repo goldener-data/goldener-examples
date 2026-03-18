@@ -112,7 +112,6 @@ class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
                 batch_size=32,
                 num_workers=8,
                 to_keep_schema={"label": pxt.String},
-                target_to_label=self._LABEL_MAPPING,
             )
             if drop_duplicate_table:
                 pxt.drop_table(duplicate_table_path, if_not_exists="ignore")
@@ -213,7 +212,6 @@ class VOCSegmentationDataModule(LightningDataModule):
             name_prefix=self.settings_as_str,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
-            target_to_label=PascalVOC2012Segmentation._LABEL_MAPPING,
         )
         if cfg.gold_splitter.update_selection:
             pxt.drop_table(
