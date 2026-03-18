@@ -5,7 +5,7 @@ gold_splitter:
   min_pxt_insert_size: 10000
   batch_size: 128
   num_workers: 15
-  table_name: cifar10_dinov3small_224
+  table_name: cifar10_dinov3large_224
   update_selection: True
   n_clusters: 0
 
