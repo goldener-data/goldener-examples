@@ -138,7 +138,7 @@ def get_gold_splitter(
         sets=sets,
         descriptor=descriptor,
         vectorizer=None,
-        n_cluster=n_clusters,
+        n_clusters=n_clusters,
         clusterizer=clusterizer,
         selector=selector,
         max_batches=max_batches,

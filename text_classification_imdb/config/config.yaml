@@ -16,7 +16,7 @@ exp:
   val_ratio: 0.2
   max_epochs: 10
   learning_rate: 0.001
-  batch_size: 512
+  batch_size: 256
   validate_on_test: True
   random_state: 42
   checkpoint: checkpoints
