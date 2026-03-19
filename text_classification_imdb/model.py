@@ -200,7 +200,9 @@ class IMDbLightningModule(LightningModule):
 
     def on_test_start(self) -> None:
         self.test_auroc = BinaryAUROC()
-        self.test_acc = BinaryAccuracy()
+        self.test_acc = BinaryAccuracy().to(
+            torch.device("cpu" if not torch.cuda.is_available() else "cuda")
+        )
 
     def test_step(
         self,

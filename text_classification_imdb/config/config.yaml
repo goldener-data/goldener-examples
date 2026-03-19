@@ -14,7 +14,7 @@ exp:
   split_method: all  # Options: random, gold, or all
   model: cnn  # Options: cnn, bert
   val_ratio: 0.2
-  max_epochs: 10
+  max_epochs: 20
   learning_rate: 0.001
   batch_size: 256
   validate_on_test: True
