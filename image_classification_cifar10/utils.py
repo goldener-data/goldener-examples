@@ -58,12 +58,14 @@ def get_gold_descriptor(
     embedder = GoldTorchEmbeddingTool(
         GoldTorchEmbeddingToolConfig(
             model=timm.create_model(
-                model_name="vit_small_patch16_dinov3.lvd1689m",
+                model_name="vit_large_patch16_dinov3.lvd1689m",
                 pretrained=True,
                 img_size=224,
                 device=device,
             ),
-            layers=["blocks.11"],
+            layers=[
+                "blocks.23",
+            ],
         )
     )
 
@@ -144,6 +146,7 @@ def get_gold_splitter(
         descriptor=descriptor,
         vectorizer=None,
         clusterizer=clusterizer,
+        n_clusters=n_clusters,
         selector=selector,
         max_batches=max_batches,
     )
