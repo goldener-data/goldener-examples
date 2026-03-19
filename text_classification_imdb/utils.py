@@ -45,7 +45,7 @@ def get_gold_descriptor(
 ) -> GoldDescriptor:
     device = torch.device("cpu" if not torch.cuda.is_available() else "cuda")
 
-    model = AutoModel.from_pretrained(pretrained_model)
+    model = AutoModel.from_pretrained(pretrained_model).to(device)
     embedder = GoldTorchEmbeddingTool(
         GoldTorchEmbeddingToolConfig(
             model=model,
@@ -138,6 +138,7 @@ def get_gold_splitter(
         sets=sets,
         descriptor=descriptor,
         vectorizer=None,
+        n_cluster=n_clusters,
         clusterizer=clusterizer,
         selector=selector,
         max_batches=max_batches,

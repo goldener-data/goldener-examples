@@ -89,7 +89,9 @@ class IMDbLightningModule(LightningModule):
 
     def on_train_start(self) -> None:
         self.train_auroc = BinaryAUROC()
-        self.train_acc = BinaryAccuracy()
+        self.train_acc = BinaryAccuracy().to(
+            torch.device("cpu" if not torch.cuda.is_available() else "cuda")
+        )
 
     def _step(
         self,
@@ -100,7 +102,7 @@ class IMDbLightningModule(LightningModule):
     ) -> torch.Tensor:
         input_ids, attention_mask, labels, _ = batch
 
-        logits = self(input_ids, attention_mask)
+        logits = self(input_ids)
         loss = F.binary_cross_entropy_with_logits(logits, labels.float())
         self.log(f"{prefix}_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -140,10 +142,14 @@ class IMDbLightningModule(LightningModule):
 
     def on_validation_epoch_start(self) -> None:
         self.val_auroc = BinaryAUROC()
-        self.val_acc = BinaryAccuracy()
+        self.val_acc = BinaryAccuracy().to(
+            torch.device("cpu" if not torch.cuda.is_available() else "cuda")
+        )
         if self.has_test_as_val:
             self.test_as_val_auroc = BinaryAUROC()
-            self.test_as_val_acc = BinaryAccuracy()
+            self.test_as_val_acc = BinaryAccuracy().to(
+                torch.device("cpu" if not torch.cuda.is_available() else "cuda")
+            )
 
     @property
     def has_test_as_val(self) -> bool:

@@ -2,8 +2,8 @@ defaults:
   - _self_
 
 gold_splitter:
-  min_pxt_insert_size: 5000
-  batch_size: 64
+  min_pxt_insert_size: 10000
+  batch_size: 512
   num_workers: 8
   table_name: imdb_bert_base_uncased_256
   pretrained_model: bert-base-uncased
@@ -16,7 +16,7 @@ exp:
   val_ratio: 0.2
   max_epochs: 10
   learning_rate: 0.001
-  batch_size: 32
+  batch_size: 512
   validate_on_test: True
   random_state: 42
   checkpoint: checkpoints
