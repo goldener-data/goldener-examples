@@ -122,7 +122,7 @@ class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
             features_per_label = defaultdict(list)
             indices_per_label = defaultdict(list)
             for row in vectorized.select(
-                vectorized.idx, vectorized.features, vectorized.label
+                vectorized.idx, vectorized.embeddings, vectorized.label
             ).collect():
                 features_per_label[row["label"]].append(row["features"])
                 indices_per_label[row["label"]].append(row["idx"])

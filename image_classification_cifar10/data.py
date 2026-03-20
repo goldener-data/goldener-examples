@@ -108,7 +108,7 @@ class GoldCifar10(CIFAR10):
             gold_descriptor = get_gold_descriptor(
                 table_name=duplicate_table_path,
                 min_pxt_insert_size=10000,
-                batch_size=128,
+                batch_size=16,
                 num_workers=16,
                 to_keep_schema={"label": pxt.String},
             )
@@ -121,7 +121,7 @@ class GoldCifar10(CIFAR10):
             features_per_label = defaultdict(list)
             indices_per_label = defaultdict(list)
             for row in vectorized.select(
-                vectorized.idx, vectorized.features, vectorized.label
+                vectorized.idx, vectorized.embeddings, vectorized.label
             ).collect():
                 features_per_label[row["label"]].append(row["features"])
                 indices_per_label[row["label"]].append(row["idx"])
