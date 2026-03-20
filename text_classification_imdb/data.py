@@ -38,7 +38,7 @@ class IMDbDataset(Dataset):
                 shuffle=True,
                 stratify=self.targets_as_array,
             )
-            self._data = self.data[training_indices]
+            self._data = self._data[training_indices]
             self.excluded_indices = excluded
         else:
             self.excluded_indices = []
