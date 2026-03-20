@@ -1,9 +1,8 @@
 from collections import defaultdict
 from copy import deepcopy
-from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import Tuple, Callable, Literal
+from typing import Tuple, Callable
 
 import torch
 from lightning import LightningDataModule
@@ -30,14 +29,6 @@ from image_classification_cifar10.utils import (
 )
 
 logger = getLogger(__name__)
-
-
-@dataclass
-class Sample:
-    dataset_idx: int
-    features: np.ndarray
-    label: str
-    training_set: Literal["train", "val"] | None = None
 
 
 class GoldCifar10(CIFAR10):
@@ -123,7 +114,7 @@ class GoldCifar10(CIFAR10):
             for row in vectorized.select(
                 vectorized.idx, vectorized.embeddings, vectorized.label
             ).collect():
-                features_per_label[row["label"]].append(row["features"])
+                features_per_label[row["label"]].append(row["embeddings"])
                 indices_per_label[row["label"]].append(row["idx"])
 
             # perform clustering and duplication per label

@@ -1,9 +1,8 @@
 from collections import defaultdict
 from copy import deepcopy
-from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Callable
 from tqdm import tqdm
 
 import torch
@@ -32,14 +31,6 @@ from image_segmentation_pascal_voc.utils import (
 )
 
 logger = getLogger(__name__)
-
-
-@dataclass
-class Sample:
-    dataset_idx: int
-    features: np.ndarray
-    label: str
-    training_set: Literal["train", "val"] | None = None
 
 
 class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
@@ -124,7 +115,7 @@ class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
             for row in vectorized.select(
                 vectorized.idx, vectorized.embeddings, vectorized.label
             ).collect():
-                features_per_label[row["label"]].append(row["features"])
+                features_per_label[row["label"]].append(row["embeddings"])
                 indices_per_label[row["label"]].append(row["idx"])
 
             # perform clustering and duplication per label
