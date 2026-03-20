@@ -22,11 +22,27 @@ class IMDbDataset(Dataset):
         tokenizer_name: str = "bert-base-uncased",
         max_length: int = 256,
         count: int | None = None,
+        remove_ratio: float | None = None,
+        random_state: int = 42,
     ) -> None:
         raw = load_dataset("imdb", split=split)
         if count is not None:
             raw = raw.select(range(count))
         self._data = raw
+
+        if remove_ratio is not None:
+            training_indices, excluded = train_test_split(
+                range(len(self)),
+                test_size=remove_ratio,
+                random_state=random_state,
+                shuffle=True,
+                stratify=self.targets_as_array,
+            )
+            self._data = self.data[training_indices]
+            self.excluded_indices = excluded
+        else:
+            self.excluded_indices = []
+
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.max_length = max_length
 
@@ -74,6 +90,7 @@ class IMDbDataModule(LightningDataModule):
         self.val_ratio: float = cfg.exp.val_ratio
         self.split_method = cfg.exp.split_method
         self.random_split_state: int = cfg.data.random_split_state
+        self.remove_ratio = cfg.data.remove_ratio
 
         self.batch_size: int = cfg.exp.batch_size
         self.num_workers: int = cfg.data.num_workers
@@ -133,35 +150,37 @@ class IMDbDataModule(LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         if stage == "fit" or stage is None:
-            full_dataset = IMDbDataset(
+            training_dataset = IMDbDataset(
                 split="train",
                 tokenizer_name=self.tokenizer_name,
                 max_length=self.max_length,
                 count=self.train_count,
+                remove_ratio=self.remove_ratio,
             )
+            self.excluded_train_indices = training_dataset.excluded_indices
 
             # Random splitting with sklearn (stratified)
             if self.split_method in ("random", "all"):
                 self.sk_train_indices, self.sk_val_indices = train_test_split(
-                    range(len(full_dataset)),
-                    test_size=int(self.val_ratio * len(full_dataset)),
+                    range(len(training_dataset)),
+                    test_size=int(self.val_ratio * len(training_dataset)),
                     random_state=self.random_split_state,
                     shuffle=True,
-                    stratify=full_dataset.targets_as_array,
+                    stratify=training_dataset.targets_as_array,
                 )
-                self.sk_train_dataset = Subset(full_dataset, self.sk_train_indices)
-                self.sk_val_dataset = Subset(full_dataset, self.sk_val_indices)
+                self.sk_train_dataset = Subset(training_dataset, self.sk_train_indices)
+                self.sk_val_dataset = Subset(training_dataset, self.sk_val_indices)
 
             # Smart splitting with GoldSplitter
             if self.split_method in ("gold", "all"):
-                split_table = self.gold_splitter.split_in_table(full_dataset)
+                split_table = self.gold_splitter.split_in_table(training_dataset)
                 splits = self.gold_splitter.get_split_indices(
                     split_table, selection_key="selected", idx_key="idx"
                 )
                 self.gold_train_indices = list(splits["train"])
                 self.gold_val_indices = list(splits["val"])
-                self.gold_train_dataset = Subset(full_dataset, self.gold_train_indices)
-                self.gold_val_dataset = Subset(full_dataset, self.gold_val_indices)
+                self.gold_train_dataset = Subset(training_dataset, self.gold_train_indices)
+                self.gold_val_dataset = Subset(training_dataset, self.gold_val_indices)
 
         if stage == "test" or stage is None:
             self.test_dataset = IMDbDataset(

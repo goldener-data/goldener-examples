@@ -22,6 +22,7 @@ exp:
   checkpoint: checkpoints
 
 data:
+  remove_ratio: null
   tokenizer_name: bert-base-uncased
   max_length: 256
   random_split_state: 42
