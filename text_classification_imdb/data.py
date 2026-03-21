@@ -136,8 +136,8 @@ class IMDbDataModule(LightningDataModule):
     def settings_as_str(self) -> str:
         return (
             f"imdb_{self.tokenizer_name.replace('-', '_')}_{self.max_length}"
-            f"_{self.random_state}"
-        )
+            f"_{self.random_state}_{self.remove_ratio}"
+        ).replace(".", "_")
 
     @property
     def vocab_size(self) -> int:
