@@ -70,9 +70,9 @@ class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
         # The removal is done randomly
         if remove_ratio is not None:
             multilabel_iterative_train_test_split(
-                self.get_index_labels(self.batch_size, self.num_workers),
-                test_size=self.val_ratio,
-                random_state=self.random_split_state,
+                self.get_index_labels(32, 8),
+                test_size=remove_ratio,
+                random_state=random_state,
             )
             training_indices, excluded = train_test_split(
                 range(len(self.samples)),
@@ -196,6 +196,7 @@ class VOCSegmentationDataModule(LightningDataModule):
         self.random_state = cfg.exp.random_state
 
         self.val_ratio = cfg.exp.val_ratio
+        self.split_method = cfg.exp.split_method
 
         self.random_split_state = cfg.data.random_split_state
         self.remove_ratio = cfg.data.remove_ratio
@@ -300,32 +301,37 @@ class VOCSegmentationDataModule(LightningDataModule):
             self.excluded_train_indices = val_dataset.excluded_indices
 
             # make gold splitting
-            split_table = self.gold_splitter.split_in_table(val_dataset)
-            splits = self.gold_splitter.get_split_indices(
-                split_table, selection_key="selected", idx_key="idx"
-            )
-            self.gold_train_indices = list(splits["train"])
-            self.gold_val_indices = list(splits["val"])
+            if self.split_method in ("gold", "all"):
+                split_table = self.gold_splitter.split_in_table(val_dataset)
+                splits = self.gold_splitter.get_split_indices(
+                    split_table, selection_key="selected", idx_key="idx"
+                )
+                self.gold_train_indices = list(splits["train"])
+                self.gold_val_indices = list(splits["val"])
 
             # make random splitting with sklearn
-            (
-                self.sk_train_indices,
-                self.sk_val_indices,
-            ) = multilabel_iterative_train_test_split(
-                val_dataset.get_index_labels(self.batch_size, self.num_workers),
-                test_size=self.val_ratio,
-                random_state=self.random_split_state,
-            )
+            if self.split_method in ("random", "all"):
+                (
+                    self.sk_train_indices,
+                    self.sk_val_indices,
+                ) = multilabel_iterative_train_test_split(
+                    val_dataset.get_index_labels(self.batch_size, self.num_workers),
+                    test_size=self.val_ratio,
+                    random_state=self.random_split_state,
+                )
 
             # assign datasets
             val_dataset.target_transform = self.mask_transform
             train_dataset = deepcopy(val_dataset)
             train_dataset.transform = self.train_transforms
 
-            self.gold_train_dataset = Subset(train_dataset, self.gold_train_indices)
-            self.gold_val_dataset = Subset(val_dataset, self.gold_val_indices)
-            self.sk_train_dataset = Subset(train_dataset, self.sk_train_indices)
-            self.sk_val_dataset = Subset(val_dataset, self.sk_val_indices)
+            if self.split_method in ("gold", "all"):
+                self.gold_train_dataset = Subset(train_dataset, self.gold_train_indices)
+                self.gold_val_dataset = Subset(val_dataset, self.gold_val_indices)
+
+            if self.split_method in ("random", "all"):
+                self.sk_train_dataset = Subset(train_dataset, self.sk_train_indices)
+                self.sk_val_dataset = Subset(val_dataset, self.sk_val_indices)
 
         if stage == "test" or stage is None:
             self.test_dataset = GoldPascalVOC2012Segmentation(
