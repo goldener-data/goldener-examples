@@ -1,0 +1,45 @@
+defaults:
+  - _self_
+
+gold_splitter:
+  min_pxt_insert_size: 10000
+  batch_size: 512
+  num_workers: 8
+  table_name: imdb_bert_base_uncased_256
+  pretrained_model: bert-base-uncased
+  update_selection: True
+  n_clusters: 0
+
+exp:
+  split_method: all  # Options: random, gold, or all
+  model: cnn  # Options: cnn, bert
+  val_ratio: 0.2
+  max_epochs: 20
+  learning_rate: 0.001
+  batch_size: 256
+  validate_on_test: True
+  random_state: 42
+  checkpoint: checkpoints
+
+data:
+  remove_ratio: null
+  tokenizer_name: bert-base-uncased
+  max_length: 256
+  random_split_state: 42
+  num_workers: 4
+
+logging:
+  mlflow_tracking_uri: mlruns
+  mlflow_experiment_name: imdb
+  mlflow_run_name: imdb
+
+debug_count:
+  test_count: null  # Set to a number (e.g., 5) to limit validation/test batches. null = no limit
+  train_count: null  # Set to a number (e.g., 10) to limit training batches. null = no limit
+
+
+
+
+hydra:
+  job_logging:
+    version: 1

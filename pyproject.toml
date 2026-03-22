@@ -35,6 +35,10 @@ vision = [
     "pillow",
     "segmentation_models_pytorch"
 ]
+text = [
+    "transformers",
+    "datasets",
+]
 
 
 [tool.uv]

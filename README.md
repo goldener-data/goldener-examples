@@ -77,6 +77,21 @@ uv run python voc_experiment.py
 
 See the [detailed README](image_segmentation_pascal_voc/README.md) for more information.
 
+### 3. Text Classification: IMDb Movie Reviews with CNN and BERT-Base
+
+**Quick Start**:
+```bash
+# Install dependencies (from repo root)
+uv sync --extra text
+
+# Run experiment
+cd text_classification_imdb
+uv run python imdb_experiment.py
+```
+
+See the [detailed README](text_classification_imdb/README.md) for more information.
+
+
 ## About Goldener
 
 Goldener provides intelligent data splitting strategies that aim to create
