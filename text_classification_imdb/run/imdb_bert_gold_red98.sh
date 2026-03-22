@@ -1,0 +1,1 @@
+CUBLAS_WORKSPACE_CONFIG=:16:8 uv run python -m text_classification_imdb.imdb_experiment exp.split_method=gold exp.random_state=42 data.random_split_state=42 exp.model=bert logging.mlflow_experiment_name=imdb_bert data.remove_ratio=0.98
