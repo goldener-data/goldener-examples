@@ -102,13 +102,21 @@ def run_experiment(
         artifact_file="config.yaml",
     )
 
-    mlflow_logger.experiment.log_dict(
-        run_id=mlflow_logger.run_id,
-        dictionary={
+    if split_method == "gold":
+        indices_dict = {
             "gold_train_indices": data_module.gold_train_indices,
             "gold_val_indices": data_module.gold_val_indices,
+        }
+    else:
+        indices_dict = {
             "sk_train_indices": data_module.sk_train_indices,
             "sk_val_indices": data_module.sk_val_indices,
+        }
+
+    mlflow_logger.experiment.log_dict(
+        run_id=mlflow_logger.run_id,
+        dictionary=indices_dict
+        | {
             "duplicated": data_module.duplicated_train_indices,
             "excluded_indices": data_module.excluded_train_indices,
         },
