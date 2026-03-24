@@ -3,7 +3,7 @@ defaults:
 
 gold_splitter:
   min_pxt_insert_size: 10000
-  batch_size: 512
+  batch_size: 56
   num_workers: 8
   table_name: imdb_bert_base_uncased_256
   pretrained_model: bert-base-uncased
