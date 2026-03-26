@@ -173,13 +173,16 @@ class IMDbDataModule(LightningDataModule):
 
             # Smart splitting with GoldSplitter
             if self.split_method in ("gold", "all"):
-                split_table = self.gold_splitter.split_in_table(training_dataset)
+                with torch.no_grad():
+                    split_table = self.gold_splitter.split_in_table(training_dataset)
                 splits = self.gold_splitter.get_split_indices(
                     split_table, selection_key="selected", idx_key="idx"
                 )
                 self.gold_train_indices = list(splits["train"])
                 self.gold_val_indices = list(splits["val"])
-                self.gold_train_dataset = Subset(training_dataset, self.gold_train_indices)
+                self.gold_train_dataset = Subset(
+                    training_dataset, self.gold_train_indices
+                )
                 self.gold_val_dataset = Subset(training_dataset, self.gold_val_indices)
 
         if stage == "test" or stage is None:
