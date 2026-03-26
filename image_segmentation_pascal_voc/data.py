@@ -111,7 +111,9 @@ class GoldPascalVOC2012Segmentation(PascalVOC2012Segmentation):
             )
             if drop_duplicate_table:
                 pxt.drop_table(duplicate_table_path, if_not_exists="ignore")
-            vectorized = gold_descriptor.describe_in_table(self)
+
+            with torch.no_grad():
+                vectorized = gold_descriptor.describe_in_table(self)
             torch.cuda.empty_cache()
 
             # group features and specific indices by label
@@ -302,7 +304,8 @@ class VOCSegmentationDataModule(LightningDataModule):
 
             # make gold splitting
             if self.split_method in ("gold", "all"):
-                split_table = self.gold_splitter.split_in_table(val_dataset)
+                with torch.no_grad():
+                    split_table = self.gold_splitter.split_in_table(val_dataset)
                 splits = self.gold_splitter.get_split_indices(
                     split_table, selection_key="selected", idx_key="idx"
                 )
