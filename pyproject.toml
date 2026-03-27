@@ -39,7 +39,14 @@ text = [
     "transformers",
     "datasets",
 ]
-
+reports = [
+    "notebook",
+    "plotly",
+    "seaborn",
+    "pandas",
+    "matplotlib",
+    "tabulate",
+]
 
 [tool.uv]
 dev-dependencies = [
