@@ -1,1 +1,0 @@
-CUBLAS_WORKSPACE_CONFIG=:16:8 uv run python -m image_classification_cifar10.cifar10_experiment --multirun +hydra/sweeper/params=dup_0_02 exp.split_method=gold data.drop_duplicate_table=True exp.random_state=42 data.random_split_state=42 exp.model=resnet logging.mlflow_experiment_name=cifar10_resnet
