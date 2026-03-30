@@ -1,21 +1,7 @@
-# gold-split-examples
+# goldener-examples
 
-Different examples using Goldener GoldSplitter during training Machine Learning models.
-These examples systematically compares two data splitting strategies for training machine learning models.
-Data splitting is a critical step that can significantly impact model performance and generalization.
-While random splitting is the standard approach, smart splitting strategies like GoldSplitter aim
-to create more balanced and representative train/validation splits, potentially leading to:
-
-- Better model generalization
-- More reliable validation metrics
-- Faster convergence
-- More representative performance estimation
-
-
-Thus, in all the examples, two data splitting strategies for creating training and validation datasets are compared:
-
-1. **Random Split**: Traditional random split using scikit-learn
-2. **Smart Split**: Intelligent split using GoldSplitter from the Goldener library
+Different examples using Goldener during training Machine Learning models.
+These examples systematically compares goldener features with standard strategies for training machine learning models.
 
 ## Development Setup
 
@@ -39,7 +25,7 @@ The pre-commit hooks will automatically run:
 
 ## Main dependencies
 
-- [Goldener](https://github.com/goldener-data/goldener): Smart data splitting
+- [Goldener](https://github.com/goldener-data/goldener): Smart data orchestration strategies for training machine learning models
 - [scikit-learn](https://scikit-learn.org/): Random uniform data splitting
 - [PyTorch](https://pytorch.org/): Neural networks building blocks/losses and data loading
 - [Pytorch Lightning](https://www.pytorchlightning.ai/): Neural network training and evaluation framework
@@ -94,5 +80,4 @@ See the [detailed README](text_classification_imdb/README.md) for more informati
 
 ## About Goldener
 
-Goldener provides intelligent data splitting strategies that aim to create
-more balanced and representative train/validation splits compared to traditional random splitting.
+Goldener provides intelligent data orchestration strategies that aim to optimize the training process of machine learning models.

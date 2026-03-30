@@ -1,6 +1,7 @@
 # Text Classification: IMDb Movie Reviews
 
-This example compares two data splitting strategies for binary sentiment classification on the
+This experiment applies different Goldener features during the training
+of different binary sentiment classification models on the
 [IMDb Large Movie Review Dataset](https://huggingface.co/datasets/imdb).
 
 ## Table of Contents
@@ -13,9 +14,9 @@ This example compares two data splitting strategies for binary sentiment classif
 
 ## Main Components
 
-- **Configuration**: The experiment is configured from a config file loaded from Hydra for flexible configuration management.
-It allows specifying the hyperparameters and logging parameters for the model training/evaluation
-as well as the data split method to use and the settings for the GoldSplitter.
+- **Configuration**: The experiment is configured from a config file loaded from Hydra 
+for flexible configuration management. It allows to specify the hyperparameters and 
+logging parameter for the model training/evaluation but as well all the Goldener settings.
 
 - **IMDbDataModule**: A specific Pytorch Lightning DataModule allowing to load data from the
 IMDb Large Movie Review dataset (50k movie reviews). Depending on the configuration, only a subset of the
@@ -27,7 +28,7 @@ text classification models (custom CNN, Bert-based classifier) for the IMDb Larg
 - **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
 testing loops. It checkpoints the best model based on validation IoU metric.
 
-- **Logging**: MLFlow for experiment tracking allowing to compare the different splitting strategies based on the logged metrics.
+- **Logging**: MLFlow for experiment tracking allowing to compare the different training strategies based on the logged metrics.
 
 ## Quick Start
 
@@ -37,7 +38,7 @@ uv sync --extra text
 
 # Make sure you're in the experiment directory
 cd text_classification_imdb
-# Run both split methods (uses default config)
+# Run experiment (uses default config)
 uv run python imdb_experiment.py
 
 # View results
@@ -130,17 +131,9 @@ val_indices = np.array(list(splits["val"]))
 ```
 
 **Characteristics**:
-- Considers class labels for balanced splits
+- Leverage pretrained feature to spot representative samples for training and validation sets
 - Aims for optimal distribution
-- May lead to more representative validation sets
-- Potentially better generalization
-
-### Evaluation Criteria
-
-Compare the two methods on:
-- **Convergence Speed**: Epochs to reach best performance
-- **Stability**: Variance in validation metrics across epochs
-- **Test Performance**: Final performance on held-out test set
+- Potentially leads to better generalization
 
 ## Viewing Results
 
@@ -149,4 +142,4 @@ After running the experiment, start the MLFlow UI:
 mlflow ui
 ```
 
-Then open `http://localhost:5000` in your browser to compare results between split methods.
+Then open `http://localhost:5000` in your browser to compare results between runs.

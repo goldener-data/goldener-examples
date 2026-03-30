@@ -1,7 +1,8 @@
 # CIFAR-10 Split Comparison Experiment
 
-This experiment compares the two data splitting strategies for training
-for different image classification model type on the [CIFAR-10 dataset](https://www.cs.toronto.edu/~kriz/cifar.html).
+This experiment applies different Goldener features during the training
+of different image classification models on the [CIFAR-10 dataset](https://www.cs.toronto.edu/~kriz/cifar.html). So far, illustrated Goldener features are:
+- **GoldSplitter**: A smart data splitting method leveraging pretrained model to identify representative samples for training and validation sets.
 
 
 ## Table of Contents
@@ -15,9 +16,9 @@ for different image classification model type on the [CIFAR-10 dataset](https://
 
 ## Main components
 
-- **Configuration**: The experiment is configured from a config file loaded from Hydra for flexible configuration management.
-It allows to specify the hyperparameters and logging parameter for the model training/evaluation
-but as well as the data split method to use and the settings for the GoldSplitter.
+- **Configuration**: The experiment is configured from a config file loaded from Hydra 
+for flexible configuration management. It allows to specify the hyperparameters and 
+logging parameter for the model training/evaluation but as well all the Goldener settings.
 
 - **CIFAR10DataModule**: A specific Pytorch Lightning Datamodule allowing to load data from the CIFAR-10 dataset from torchvision
 (50,000 training images, 10,000 test images). Depending on the configuration, only a subset of the
@@ -29,7 +30,7 @@ image classification models (ResNet-18, ViT-S, custom CNN) for the CIFAR-p10 dat
 - **Trainer**: PyTorch Lightning Trainer for efficient training management allowing to handle training, validation and
 testing loops. It allows as well to checkpoint the best model based on validation AUROC metric.
 
-- **Logging**: MLFlow for experiment tracking allowing to compare the different splitting strategies based on the logged metrics.
+- **Logging**: MLFlow for experiment tracking allowing to compare the training strategies based on the logged metrics.
 
 ## Quick Start
 
@@ -40,7 +41,7 @@ uv sync --extra vision
 # Make sure you're in the experiment directory
 cd image_classification_cifar10
 
-# Run both split methods (uses default config)
+# Run experiment (uses default config)
 uv run python cifar10_experiment.py
 
 # View results
@@ -120,7 +121,7 @@ train_indices, val_indices = train_test_split(
 
 ### GoldSplitter (Smart Split)
 
-The smart split is done from the class token of the Dinov3 ViT-S model.
+The smart split is done from the class token of the Dinov3 ViT-L model.
 
 ```python
 from image_classification_cifar10.utils import get_gold_splitter
@@ -135,18 +136,9 @@ val_indices = np.array(list(splits["val"]))
 ```
 
 **Characteristics**:
-- Considers class labels for balanced splits
+- Leverage pretrained feature to spot representative samples for training and validation sets
 - Aims for optimal distribution
-- May lead to more representative validation sets
-- Potentially better generalization
-
-
-### Evaluation Criteria
-
-Compare the two methods on:
-- **Convergence Speed**: Epochs to reach best performance
-- **Stability**: Variance in validation metrics across epochs
-- **Test Performance**: Final performance on held-out test set
+- Potentially leads to better generalization
 
 ## Viewing Results
 
@@ -155,4 +147,4 @@ After running the experiment, start the MLFlow UI:
 mlflow ui
 ```
 
-Then open `http://localhost:5000` in your browser to compare results between split methods.
+Then open `http://localhost:5000` in your browser to compare results between run.
