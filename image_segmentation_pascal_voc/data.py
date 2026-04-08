@@ -201,6 +201,7 @@ class VOCSegmentationDataModule(LightningDataModule):
         self.split_method = cfg.exp.split_method
 
         self.random_split_state = cfg.data.random_split_state
+        self.random_shuffle_state = cfg.data.random_shuffle_state
         self.remove_ratio = cfg.data.remove_ratio
         self.duplicate_table_path = cfg.data.duplicate_table_path
         self.drop_duplicate_table = cfg.data.drop_duplicate_table
@@ -353,7 +354,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
+            generator=torch.Generator().manual_seed(self.random_shuffle_state),
             collate_fn=collate_pascal_voc,
             drop_last=True,
         )
@@ -378,7 +379,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
+            generator=torch.Generator().manual_seed(self.random_shuffle_state),
             collate_fn=collate_pascal_voc,
             drop_last=True,
         )

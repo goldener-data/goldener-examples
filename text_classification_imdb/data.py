@@ -90,6 +90,7 @@ class IMDbDataModule(LightningDataModule):
         self.val_ratio: float = cfg.exp.val_ratio
         self.split_method = cfg.exp.split_method
         self.random_split_state: int = cfg.data.random_split_state
+        self.random_shuffle_state: int = cfg.data.random_shuffle_state
         self.remove_ratio = cfg.data.remove_ratio
 
         self.batch_size: int = cfg.exp.batch_size
@@ -201,7 +202,7 @@ class IMDbDataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
+            generator=torch.Generator().manual_seed(self.random_shuffle_state),
         )
 
     def sk_val_dataloader(self) -> DataLoader:
@@ -222,7 +223,7 @@ class IMDbDataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
+            generator=torch.Generator().manual_seed(self.random_shuffle_state),
         )
 
     def gold_val_dataloader(self) -> DataLoader:

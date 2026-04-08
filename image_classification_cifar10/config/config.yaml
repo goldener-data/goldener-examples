@@ -29,6 +29,7 @@ data:
   cluster_count: null
   duplicate_per_sample: null
   random_split_state: 42
+  random_shuffle_state: 42
   num_workers: 15
 
 logging:

@@ -97,7 +97,7 @@ def get_gold_splitter(
 
     to_keep_schema = {"label": pxt.String}
 
-    table_name = f"{name_prefix}_{splitter_config["table_name"]}"
+    table_name = f"{name_prefix}_{splitter_config['table_name']}"
 
     clusterizer = (
         None
