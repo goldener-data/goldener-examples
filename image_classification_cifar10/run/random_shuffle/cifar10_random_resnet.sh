@@ -1,5 +1,0 @@
-uv run python -m image_classification_cifar10.cifar10_experiment exp.split_method=gold exp.random_state=42 data.random_shuffle_state=42 exp.model=resnet logging.mlflow_experiment_name=cifar10_resnet
-uv run python -m image_classification_cifar10.cifar10_experiment exp.split_method=gold exp.random_state=42 data.random_shuffle_state=53 exp.model=resnet logging.mlflow_experiment_name=cifar10_resnet
-uv run python -m image_classification_cifar10.cifar10_experiment exp.split_method=gold exp.random_state=42 data.random_shuffle_state=64 exp.model=resnet logging.mlflow_experiment_name=cifar10_resnet
-uv run python -m image_classification_cifar10.cifar10_experiment exp.split_method=gold exp.random_state=42 data.random_shuffle_state=75 exp.model=resnet logging.mlflow_experiment_name=cifar10_resnet
-uv run python -m image_classification_cifar10.cifar10_experiment exp.split_method=gold exp.random_state=42 data.random_shuffle_state=86 exp.model=resnet logging.mlflow_experiment_name=cifar10_resnet

@@ -1,5 +1,0 @@
-uv run python -m text_classification_imdb.imdb_experiment exp.split_method=random exp.random_state=42 data.random_shuffle_state=42 exp.model=bert logging.mlflow_experiment_name=imdb_bert
-uv run python -m text_classification_imdb.imdb_experiment exp.split_method=random exp.random_state=42 data.random_shuffle_state=53 exp.model=bert logging.mlflow_experiment_name=imdb_bert
-uv run python -m text_classification_imdb.imdb_experiment exp.split_method=random exp.random_state=42 data.random_shuffle_state=64 exp.model=bert logging.mlflow_experiment_name=imdb_bert
-uv run python -m text_classification_imdb.imdb_experiment exp.split_method=random exp.random_state=42 data.random_shuffle_state=75 exp.model=bert logging.mlflow_experiment_name=imdb_bert
-uv run python -m text_classification_imdb.imdb_experiment exp.split_method=random exp.random_state=42 data.random_shuffle_state=86 exp.model=bert logging.mlflow_experiment_name=imdb_bert
