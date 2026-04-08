@@ -389,7 +389,7 @@ class CIFAR10DataModule(LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
+            generator=torch.Generator().manual_seed(self.random_shuffle_state),
         )
 
     def gold_val_dataloader(self) -> DataLoader:
