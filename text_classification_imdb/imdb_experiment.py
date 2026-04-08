@@ -94,7 +94,8 @@ def run_experiment(
 
     mlflow_logger.experiment.log_dict(
         run_id=mlflow_logger.run_id,
-        dictionary=indices_dict | {
+        dictionary=indices_dict
+        | {
             "excluded_indices": data_module.excluded_train_indices,
         },
         artifact_file="indices.json",

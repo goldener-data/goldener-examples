@@ -8,6 +8,7 @@ This script allows training different segmentation models on the Pascal VOC data
 The key difference from image classification is that the splitting is done based on
 patches corresponding to the segmentation mask (ground truth/target) rather than class tokens.
 """
+
 import logging
 import os
 import time
