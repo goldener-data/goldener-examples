@@ -88,10 +88,7 @@ For this multiclass image segmentation task, we analyze the performance from the
     />
 </picture>
 
-From the metrics, we notice that the model performance is far from saturated. When training with the full Training dataset,
-for all metrics, we can already notice an impact that is more or less significant depending on the random seed with roughly
-0.5 points in Accuracy, 3 points in mean IOU and 0.8 points in global IOU. This difference between the min and max performance
-is even larger for Accuracy and global IOU when the Training is reduced to 10% of its initial size.
+From the metrics, we notice that the model performance is far from saturated. When training with the full Training dataset, for all metrics, we can already notice an impact that is more or less significant depending on the random seed with roughly 0.5 points in Accuracy, 3 points in mean IOU and 0.8 points in global IOU. This difference between the min and max performance is even larger for Accuracy and global IOU when the Training is reduced to 10% of its initial size.
 
 <div align="center" style="font-size: 24px;">
 
@@ -102,15 +99,7 @@ is even larger for Accuracy and global IOU when the Training is reduced to 10% o
 
 </div>
 
-For the full Training set, the model is too small to fully appreciate the complexity of the task.
-Indeed, whatever the splitting random seed, the loss and metric curves are far from saturation
-at the end of the training and their trend is quite flat. On this dataset, we observe a difference between
-the worst and best performing split regarding the behavior on the Val set. Indeed, for both the loss and the metric,
-while the best performing evolution is really similar to the Test set, the worst one is demonstrating a higher Val loss
-resulting in a lower Test global IOU. However, the Val set trend is still quite similar to the Test set one
-and thus it allows to select a model quite close to the best performance possible (roughly 0.7 points which
-is lower than the global variation between seeds). Finally, while for both seeds, the loss curves are indicating
-a small overfitting, it is not really visible in the performance curves.
+For the full Training set, the model is too small to fully appreciate the complexity of the task. Indeed, whatever the splitting random seed, the loss and metric curves are far from saturation at the end of the training and their trend is quite flat. On this dataset, we observe a difference between the worst and best performing split regarding the behavior on the Val set. Indeed, for both the loss and the metric, while the best performing evolution is really similar to the Test set, the worst one is demonstrating a higher Val loss resulting in a lower Test global IOU. However, the Val set trend is still quite similar to the Test set one and thus it allows to select a model quite close to the best performance possible (roughly 0.7 points which is lower than the global variation between seeds). Finally, while for both seeds, the loss curves are indicating a small overfitting, it is not really visible in the performance curves.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/goldener-data/gold-splitter-examples/main/results/figures/train_val_split/PASCALVOC - random - loss curves.png" style="display: inline-block; width: 45%;" />
