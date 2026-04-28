@@ -9,7 +9,7 @@
 
 **TLDR**:
 
-When designing a new model, a standard practice is to make the Train/Val split randomly. However, our experiments across a few tasks and datasets reveal a critical limitation: random splits can introduce significant variability in model performance. Specifically, when training with different random seeds, we observed that the model’s performance on a fixed Test set can fluctuate substantially—even. This suggests that the randomness in the Train/Val split should be treated as a hyperparameter itself, requiring tuning to ensure robust the best performances before a model deployment.
+When designing a new model, a standard practice is to make the Train/Val split randomly. However, our experiments across a few tasks and datasets reveal a critical limitation: random splits can introduce significant variability in model performance. Specifically, when training with different random seeds, we observed that the model’s performance on a fixed Test set can fluctuate substantially. This suggests that the randomness in the Train/Val split should be treated as a hyperparameter itself, requiring tuning to ensure robust performance before a model deployment.
 
 
 ## 1. Context
