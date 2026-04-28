@@ -1,11 +1,11 @@
 # FIGHTING THE RANDOM CURSE <br> Train/Val split on CIFAR 10, PASCAL VOC and IMDB
 
-[**Context**](#context) |
-[**Experiments**](#experiments) |
-[**Conclusion**](#conclusion) |
-[**Bibliography**](#bibliography) |
-[**Authors**](#authors)|
-[**Miscellaneous**](#miscellaneous)
+[**Context**](#1-context) |
+[**Experiments**](#2-experiments) |
+[**Conclusion**](#3-conclusion) |
+[**Bibliography**](#4-bibliography) |
+[**Authors**](#5-authors)|
+[**Miscellaneous**](#6-miscellaneous)
 
 ## TLDR
 
