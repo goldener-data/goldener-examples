@@ -1,4 +1,4 @@
-# FIGHTING THE RANDOM CURSE <br> Train/Val split on CIFAR 10, PASCAL VOC and IMDB
+# FIGHTING THE RANDOM CURSE WITH GOLDENER <br> Train/Val split on CIFAR 10, PASCAL VOC and IMDB
 
 [**Context**](#1-context) |
 [**Experiments**](#2-experiments) |
