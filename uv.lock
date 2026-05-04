@@ -1669,7 +1669,7 @@ requires-dist = [
     { name = "goldener" },
     { name = "hydra-core" },
     { name = "iterative-stratification" },
-    { name = "lightning", specifier = "==2.6.1" },
+    { name = "lightning", specifier = "<=2.6.1" },
     { name = "matplotlib", marker = "extra == 'reports'" },
     { name = "mlflow" },
     { name = "notebook", marker = "extra == 'reports'" },
