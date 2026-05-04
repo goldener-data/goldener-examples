@@ -72,24 +72,20 @@ def get_gold_descriptor(
 
 
 def get_gold_splitter(
-    splitter_cfg: DictConfig,
+    goldener_config: DictConfig,
     name_prefix: str,
     val_ratio: float,
     max_batches: int | None = None,
 ) -> GoldSplitter:
-    import hydra
-
-    splitter_config = hydra.utils.instantiate(splitter_cfg)
-
-    batch_size = splitter_config["batch_size"]
-    num_workers = splitter_config["num_workers"]
-    min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
-    n_clusters = splitter_config["n_clusters"]
-    pretrained_model = splitter_config["pretrained_model"]
+    batch_size = goldener_config.batch_size
+    num_workers = goldener_config.num_workers
+    min_pxt_insert_size = goldener_config.min_pxt_insert_size
+    n_clusters = goldener_config.n_clusters
+    pretrained_model = goldener_config.pretrained_model
 
     to_keep_schema = {"label": pxt.String}
 
-    table_name = f"{name_prefix}_{splitter_config['table_name']}"
+    table_name = f"{name_prefix}_{goldener_config.table_name}"
 
     clusterizer = (
         None

@@ -68,8 +68,8 @@ def run_experiment(
             "random_split_state": cfg.data.random_split_state,
             "random_shuffle_state": cfg.data.random_shuffle_state,
             "splitting_duration": splitting_duration,
-            "splitting_update_selection": cfg.gold_splitter.update_selection,
-            "n_clusters": cfg.gold_splitter.n_clusters,
+            "splitting_update_selection": cfg.goldener_config.update_selection,
+            "n_clusters": cfg.goldener_config.n_clusters,
         }
     )
 

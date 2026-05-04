@@ -184,7 +184,7 @@ class CIFAR10DataModule(LightningDataModule):
         super().__init__()
 
         self.data_dir = cfg.data.cache
-        self.gold_splitter_cfg = cfg.gold_splitter
+        self.goldener_config = cfg.goldener_config
 
         self.random_state = cfg.exp.random_state
 
@@ -220,12 +220,12 @@ class CIFAR10DataModule(LightningDataModule):
         )
 
         self.gold_splitter: GoldSplitter = get_gold_splitter(
-            splitter_cfg=self.gold_splitter_cfg,
+            goldener_config=self.goldener_config,
             name_prefix=self.settings_as_str,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
         )
-        if cfg.gold_splitter.update_selection:
+        if cfg.goldener_config.update_selection:
             pxt.drop_table(
                 self.gold_splitter.selector.table_path, if_not_exists="ignore"
             )

@@ -84,7 +84,7 @@ class IMDbDataModule(LightningDataModule):
 
         self.tokenizer_name: str = cfg.data.tokenizer_name
         self.max_length: int = cfg.data.max_length
-        self.gold_splitter_cfg = cfg.gold_splitter
+        self.goldener_config = cfg.goldener_config
 
         self.random_state: int = cfg.exp.random_state
         self.val_ratio: float = cfg.exp.val_ratio
@@ -108,12 +108,12 @@ class IMDbDataModule(LightningDataModule):
         self.validate_on_test: bool = cfg.exp.validate_on_test
 
         self.gold_splitter: GoldSplitter = get_gold_splitter(
-            splitter_cfg=self.gold_splitter_cfg,
+            goldener_config=self.goldener_config,
             name_prefix=self.settings_as_str,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
         )
-        if cfg.gold_splitter.update_selection:
+        if cfg.goldener_config.update_selection:
             pxt.drop_table(
                 self.gold_splitter.selector.table_path, if_not_exists="ignore"
             )

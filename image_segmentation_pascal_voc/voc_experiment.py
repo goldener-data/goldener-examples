@@ -92,9 +92,9 @@ def run_experiment(
             "batch_size": cfg.exp.batch_size,
             "learning_rate": cfg.exp.learning_rate,
             "splitting_duration": splitting_duration,
-            "splitting_update_selection": cfg.gold_splitter.update_selection,
+            "splitting_update_selection": cfg.goldener_config.update_selection,
             "model_type": model_type,
-            "n_clusters": cfg.gold_splitter.n_clusters,
+            "n_clusters": cfg.goldener_config.n_clusters,
         }
     )
 
