@@ -12,6 +12,7 @@ gold_splitter:
 
 exp:
   split_method: all  # Options: random, gold, or all
+  batch_method: all  # Options: random, gold, or all
   model: cnn  # Options: cnn, bert
   val_ratio: 0.2
   max_epochs: 20

@@ -2,13 +2,13 @@ from collections import defaultdict
 from copy import deepcopy
 from logging import getLogger
 from pathlib import Path
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Literal
 
 import torch
 from lightning import LightningDataModule
 import numpy as np
 from omegaconf import DictConfig
-from torch.utils.data import Subset, DataLoader
+from torch.utils.data import Dataset, Subset, DataLoader
 import torchvision
 from torchvision.transforms.v2 import (
     Compose,
@@ -25,6 +25,7 @@ from goldener.split import GoldSplitter
 from image_classification_cifar10.utils import (
     get_gold_splitter,
     get_gold_descriptor,
+    get_gold_batcher,
     CIFAR10_PREPROCESS,
 )
 
@@ -360,15 +361,43 @@ class CIFAR10DataModule(LightningDataModule):
             label,
         )
 
-    def sk_train_dataloader(self) -> DataLoader:
+    def _get_batch_args(
+        self,
+        batch_method: Literal["gold", "random"],
+        dataset: Dataset,
+    ) -> dict:
+        generator = torch.Generator().manual_seed(self.random_shuffle_state)
+        if batch_method == "random":
+            return {
+                "batch_size": self.batch_size,
+                "shuffle": True,
+                "generator": generator,
+                "drop_last": True,
+            }
+        else:
+            return {
+                "batch_sampler": get_gold_batcher(
+                    dataset=dataset,
+                    goldener_config=self.goldener_config,
+                    name_prefix=self.settings_as_str,
+                    batch_size=self.batch_size,
+                    generator=generator,
+                    max_batches=self.max_batches,
+                )
+            }
+
+    def sk_train_dataloader(
+        self, batch_method: Literal["gold", "random"]
+    ) -> DataLoader:
         return DataLoader(
-            self.sk_train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
+            dataset=self.sk_train_dataset,
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_shuffle_state),
+            **self._get_batch_args(
+                batch_method=batch_method,
+                dataset=self.sk_train_dataset,
+            ),
         )
 
     def sk_val_dataloader(self) -> DataLoader:
@@ -381,15 +410,18 @@ class CIFAR10DataModule(LightningDataModule):
             pin_memory=True,
         )
 
-    def gold_train_dataloader(self) -> DataLoader:
+    def gold_train_dataloader(
+        self, batch_method: Literal["gold", "random"]
+    ) -> DataLoader:
         return DataLoader(
             self.gold_train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_shuffle_state),
+            **self._get_batch_args(
+                batch_method=batch_method,
+                dataset=self.sk_train_dataset,
+            ),
         )
 
     def gold_val_dataloader(self) -> DataLoader:

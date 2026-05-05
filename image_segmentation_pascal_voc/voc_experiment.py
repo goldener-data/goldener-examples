@@ -1,18 +1,8 @@
-"""
-Pascal VOC Segmentation Split Comparison Experiment
-
-This script allows training different segmentation models on the Pascal VOC dataset using two different data splitting strategies:
-1. Random split from scikit-learn
-2. Smart split using GoldSplitter from the Goldener library
-
-The key difference from image classification is that the splitting is done based on
-patches corresponding to the segmentation mask (ground truth/target) rather than class tokens.
-"""
-
 import logging
 import os
 import time
 from logging import getLogger
+from typing import Literal
 from pathlib import Path
 
 import hydra
@@ -36,7 +26,8 @@ def run_experiment(
     cfg: DictConfig,
     data_module: VOCSegmentationDataModule,
     splitting_duration: float,
-    split_method: str = "random",
+    split_method: Literal["random", "gold"] = "random",
+    batch_method: Literal["random", "gold"] = "random",
 ) -> None:
     model_type = cfg.exp.model
     logger.info(
@@ -80,6 +71,7 @@ def run_experiment(
     mlflow_logger.log_hyperparams(
         {
             "split_method": split_method,
+            "batch_method": batch_method,
             "val_ratio": cfg.exp.val_ratio,
             "random_state": cfg.exp.random_state,
             "remove_ratio": cfg.data.remove_ratio,
@@ -152,9 +144,9 @@ def run_experiment(
     )
 
     train_dataloader = (
-        data_module.sk_train_dataloader()
+        data_module.sk_train_dataloader(batch_method=batch_method)
         if split_method == "random"
-        else data_module.gold_train_dataloader()
+        else data_module.gold_train_dataloader(batch_method=batch_method)
     )
     val_dataloaders = {
         "val": (
@@ -194,18 +186,14 @@ def run_experiment(
     config_name="config",
 )
 def main(cfg: DictConfig):
-    # Print configuration
     logger.info("Starting Pascal VOC Segmentation Split Comparison Experiment")
     logger.info(f"Configuration:\n{cfg}")
 
-    # Create necessary directories
     os.makedirs(cfg.data.cache, exist_ok=True)
     os.makedirs(cfg.exp.checkpoint, exist_ok=True)
 
     seed_everything(cfg.exp.random_state, workers=True)
 
-    # run data preparation and splitting to ensure that the same
-    # splits are used for all experiments and to log the splitting duration
     starts = time.monotonic()
     data_module = VOCSegmentationDataModule(
         cfg=cfg,
@@ -217,22 +205,30 @@ def main(cfg: DictConfig):
         f"Data preparation and splitting completed in {splitting_duration:.2f} seconds"
     )
 
-    # Run experiments based on split method argument
     if cfg.exp.split_method == "all":
         split_methods = [
             "gold",
             "random",
         ]
     else:
+        assert cfg.exp.split_method in ("random", "gold")
         split_methods = [cfg.exp.split_method]
 
+    if cfg.exp.batch_method == "all":
+        batch_methods = ["gold", "random"]
+    else:
+        assert cfg.exp.batch_method in ("random", "gold")
+        batch_methods = [cfg.exp.batch_method]
+
     for split_method in split_methods:
-        run_experiment(
-            split_method=split_method,
-            data_module=data_module,
-            cfg=cfg,
-            splitting_duration=splitting_duration,
-        )
+        for batch_method in batch_methods:
+            run_experiment(
+                split_method=split_method,  # type: ignore[arg-type]
+                batch_method=batch_method,  # type: ignore[arg-type]
+                data_module=data_module,
+                cfg=cfg,
+                splitting_duration=splitting_duration,
+            )
 
 
 if __name__ == "__main__":
