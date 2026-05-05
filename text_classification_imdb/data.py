@@ -254,7 +254,7 @@ class IMDbDataModule(LightningDataModule):
             pin_memory=True,
             **self._get_batch_args(
                 batch_method=batch_method,
-                dataset=self.sk_train_dataset,
+                dataset=self.gold_train_dataset,
             ),
         )
 

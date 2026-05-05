@@ -380,6 +380,7 @@ class VOCSegmentationDataModule(LightningDataModule):
             dataset=self.sk_train_dataset,
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
+            collate_fn=collate_pascal_voc,
             pin_memory=True,
             **self._get_batch_args(
                 batch_method=batch_method,
@@ -406,10 +407,11 @@ class VOCSegmentationDataModule(LightningDataModule):
             self.gold_train_dataset,
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
+            collate_fn=collate_pascal_voc,
             pin_memory=True,
             **self._get_batch_args(
                 batch_method=batch_method,
-                dataset=self.sk_train_dataset,
+                dataset=self.gold_train_dataset,
             ),
         )
 
