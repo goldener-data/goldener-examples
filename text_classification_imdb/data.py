@@ -1,4 +1,5 @@
 from logging import getLogger
+from typing import Literal
 
 import torch
 from datasets import load_dataset
@@ -10,7 +11,7 @@ import pixeltable as pxt
 from transformers import AutoTokenizer
 from goldener.split import GoldSplitter
 
-from text_classification_imdb.utils import get_gold_splitter
+from text_classification_imdb.utils import get_gold_splitter, get_gold_batcher
 
 logger = getLogger(__name__)
 
@@ -84,12 +85,13 @@ class IMDbDataModule(LightningDataModule):
 
         self.tokenizer_name: str = cfg.data.tokenizer_name
         self.max_length: int = cfg.data.max_length
-        self.gold_splitter_cfg = cfg.gold_splitter
+        self.goldener_config = cfg.goldener_config
 
         self.random_state: int = cfg.exp.random_state
         self.val_ratio: float = cfg.exp.val_ratio
         self.split_method = cfg.exp.split_method
         self.random_split_state: int = cfg.data.random_split_state
+        self.random_shuffle_state: int = cfg.data.random_shuffle_state
         self.remove_ratio = cfg.data.remove_ratio
 
         self.batch_size: int = cfg.exp.batch_size
@@ -107,12 +109,12 @@ class IMDbDataModule(LightningDataModule):
         self.validate_on_test: bool = cfg.exp.validate_on_test
 
         self.gold_splitter: GoldSplitter = get_gold_splitter(
-            splitter_cfg=self.gold_splitter_cfg,
+            goldener_config=self.goldener_config,
             name_prefix=self.settings_as_str,
             val_ratio=self.val_ratio,
             max_batches=self.max_batches,
         )
-        if cfg.gold_splitter.update_selection:
+        if cfg.goldener_config.update_selection:
             pxt.drop_table(
                 self.gold_splitter.selector.table_path, if_not_exists="ignore"
             )
@@ -193,15 +195,43 @@ class IMDbDataModule(LightningDataModule):
                 count=self.test_count,
             )
 
-    def sk_train_dataloader(self) -> DataLoader:
+    def _get_batch_args(
+        self,
+        batch_method: Literal["gold", "random"],
+        dataset: Dataset,
+    ) -> dict:
+        generator = torch.Generator().manual_seed(self.random_shuffle_state)
+        if batch_method == "random":
+            return {
+                "batch_size": self.batch_size,
+                "shuffle": True,
+                "generator": generator,
+                "drop_last": True,
+            }
+        else:
+            return {
+                "batch_sampler": get_gold_batcher(
+                    dataset=dataset,
+                    goldener_config=self.goldener_config,
+                    name_prefix=self.settings_as_str,
+                    batch_size=self.batch_size,
+                    generator=generator,
+                    max_batches=self.max_batches,
+                )
+            }
+
+    def sk_train_dataloader(
+        self, batch_method: Literal["gold", "random"]
+    ) -> DataLoader:
         return DataLoader(
-            self.sk_train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
+            dataset=self.sk_train_dataset,
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
+            **self._get_batch_args(
+                batch_method=batch_method,
+                dataset=self.sk_train_dataset,
+            ),
         )
 
     def sk_val_dataloader(self) -> DataLoader:
@@ -214,15 +244,18 @@ class IMDbDataModule(LightningDataModule):
             pin_memory=True,
         )
 
-    def gold_train_dataloader(self) -> DataLoader:
+    def gold_train_dataloader(
+        self, batch_method: Literal["gold", "random"]
+    ) -> DataLoader:
         return DataLoader(
             self.gold_train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
             num_workers=self.num_workers,
             persistent_workers=self.num_workers > 0,
             pin_memory=True,
-            generator=torch.Generator().manual_seed(self.random_state),
+            **self._get_batch_args(
+                batch_method=batch_method,
+                dataset=self.gold_train_dataset,
+            ),
         )
 
     def gold_val_dataloader(self) -> DataLoader:

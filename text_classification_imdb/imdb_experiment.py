@@ -1,19 +1,7 @@
-"""
-IMDb Sentiment Split Comparison Experiment
-
-This script trains different models on the IMDb Movie Reviews dataset using two different
-data splitting strategies:
-1. Random split from scikit-learn
-2. Smart split using GoldSplitter from the Goldener library
-
-Models: simple CNN (1D convolutions) and BERT-Base.
-Tokenizer: WordPiece (via bert-base-uncased).
-Metrics: BinaryAUROC and accuracy.
-"""
-
 import os
 import time
 from logging import getLogger, WARNING
+from typing import Literal
 
 import hydra
 from omegaconf import DictConfig
@@ -36,7 +24,8 @@ def run_experiment(
     cfg: DictConfig,
     data_module: IMDbDataModule,
     splitting_duration: float,
-    split_method: str = "random",
+    split_method: Literal["random", "gold"] = "random",
+    batch_method: Literal["random", "gold"] = "random",
 ) -> None:
     model_type = cfg.exp.model
     logger.info(
@@ -52,13 +41,14 @@ def run_experiment(
     mlflow_logger = MLFlowLogger(
         experiment_name=f"{cfg.logging.mlflow_experiment_name}_{data_module.settings_as_str}",
         tracking_uri=cfg.logging.mlflow_tracking_uri,
-        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}",
+        run_name=f"{cfg.logging.mlflow_run_name}_{split_method}_{model_type}_{cfg.data.random_split_state}_{cfg.data.random_shuffle_state}",
         log_model=True,
     )
 
     mlflow_logger.log_hyperparams(
         {
             "split_method": split_method,
+            "batch_method": batch_method,
             "model_type": model_type,
             "val_ratio": cfg.exp.val_ratio,
             "max_epochs": cfg.exp.max_epochs,
@@ -68,9 +58,10 @@ def run_experiment(
             "tokenizer_name": cfg.data.tokenizer_name,
             "max_length": cfg.data.max_length,
             "random_split_state": cfg.data.random_split_state,
+            "random_shuffle_state": cfg.data.random_shuffle_state,
             "splitting_duration": splitting_duration,
-            "splitting_update_selection": cfg.gold_splitter.update_selection,
-            "n_clusters": cfg.gold_splitter.n_clusters,
+            "splitting_update_selection": cfg.goldener_config.update_selection,
+            "n_clusters": cfg.goldener_config.n_clusters,
         }
     )
 
@@ -93,7 +84,8 @@ def run_experiment(
 
     mlflow_logger.experiment.log_dict(
         run_id=mlflow_logger.run_id,
-        dictionary=indices_dict | {
+        dictionary=indices_dict
+        | {
             "excluded_indices": data_module.excluded_train_indices,
         },
         artifact_file="indices.json",
@@ -126,9 +118,9 @@ def run_experiment(
     )
 
     train_dataloader = (
-        data_module.sk_train_dataloader()
+        data_module.sk_train_dataloader(batch_method=batch_method)
         if split_method == "random"
-        else data_module.gold_train_dataloader()
+        else data_module.gold_train_dataloader(batch_method=batch_method)
     )
     val_dataloaders = {
         "val": (
@@ -157,6 +149,9 @@ def run_experiment(
     )
 
 
+ExperimentMethod = Literal["random", "gold"]
+
+
 @hydra.main(
     version_base="1.3.2",
     config_path="config",
@@ -180,17 +175,29 @@ def main(cfg: DictConfig) -> None:
     )
 
     if cfg.exp.split_method == "all":
-        split_methods = ["gold", "random"]
+        split_methods = [
+            "gold",
+            "random",
+        ]
     else:
+        assert cfg.exp.split_method in ("random", "gold")
         split_methods = [cfg.exp.split_method]
 
+    if cfg.exp.batch_method == "all":
+        batch_methods = ["gold", "random"]
+    else:
+        assert cfg.exp.batch_method in ("random", "gold")
+        batch_methods = [cfg.exp.batch_method]
+
     for split_method in split_methods:
-        run_experiment(
-            split_method=split_method,
-            data_module=data_module,
-            cfg=cfg,
-            splitting_duration=splitting_duration,
-        )
+        for batch_method in batch_methods:
+            run_experiment(
+                split_method=split_method,  # type: ignore[arg-type]
+                batch_method=batch_method,  # type: ignore[arg-type]
+                data_module=data_module,
+                cfg=cfg,
+                splitting_duration=splitting_duration,
+            )
 
 
 if __name__ == "__main__":

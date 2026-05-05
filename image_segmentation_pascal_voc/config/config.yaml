@@ -1,7 +1,7 @@
 defaults:
   - _self_
 
-gold_splitter:
+goldener_config:
   min_pxt_insert_size: 20000
   batch_size: 32
   num_workers: 8
@@ -30,6 +30,7 @@ data:
   cluster_count: null
   duplicate_per_sample: null
   random_split_state: 42
+  random_shuffle_state: 42
   num_workers: 8
 
 logging:

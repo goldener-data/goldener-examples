@@ -3,9 +3,9 @@ from collections import defaultdict
 import numpy as np
 import pixeltable as pxt
 
-import hydra
 import timm
 import torch
+from torch.utils.data import Dataset
 from goldener.select import DistanceType
 from goldener.torch_utils import get_unique_values_in_tensor
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
@@ -22,6 +22,7 @@ from goldener import (
     GoldSet,
     GoldSplitter,
 )
+from goldener.organize import GoldClusterizedBatchSampler
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, ToImage
 
@@ -74,7 +75,8 @@ def get_gold_descriptor(
     min_pxt_insert_size: int,
     batch_size: int,
     num_workers: int,
-    to_keep_schema: dict,
+    to_keep_schema: dict | None = None,
+    max_batches: int | None = None,
 ) -> GoldDescriptor:
     device = (
         torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
@@ -110,25 +112,24 @@ def get_gold_descriptor(
         batch_size=batch_size,
         num_workers=num_workers,
         device=device,
+        max_batches=max_batches,
     )
 
 
 def get_gold_splitter(
-    splitter_cfg: DictConfig,
+    goldener_config: DictConfig,
     name_prefix: str,
     val_ratio: float,
     max_batches: int | None = None,
 ) -> GoldSplitter:
-    splitter_config = hydra.utils.instantiate(splitter_cfg)
-
-    batch_size = splitter_config["batch_size"]
-    num_workers = splitter_config["num_workers"]
-    min_pxt_insert_size = splitter_config["min_pxt_insert_size"]
-    n_clusters = splitter_config["n_clusters"]
+    batch_size = goldener_config.batch_size
+    num_workers = goldener_config.num_workers
+    min_pxt_insert_size = goldener_config.min_pxt_insert_size
+    n_clusters = goldener_config.n_clusters
 
     to_keep_schema = {"labels": pxt.String}
 
-    table_name = f"{name_prefix}_{splitter_config["table_name"]}"
+    table_name = f"{name_prefix}_{goldener_config.table_name}"
 
     clusterizer = (
         None
@@ -152,6 +153,7 @@ def get_gold_splitter(
         batch_size=batch_size,
         num_workers=num_workers,
         to_keep_schema=to_keep_schema,
+        max_batches=max_batches,
     )
 
     selector = GoldSelector(
@@ -180,6 +182,51 @@ def get_gold_splitter(
         clusterizer=clusterizer,
         selector=selector,
         max_batches=max_batches,
+    )
+
+
+def get_gold_batcher(
+    dataset: Dataset,
+    goldener_config: DictConfig,
+    name_prefix: str,
+    batch_size: int,
+    generator: torch.Generator,
+    max_batches: int | None = None,
+) -> GoldClusterizedBatchSampler:
+    goldener_batch_size = goldener_config.batch_size
+    num_workers = goldener_config.num_workers
+    min_pxt_insert_size = goldener_config.min_pxt_insert_size
+
+    table_name = f"{name_prefix}_{goldener_config.table_name}"
+
+    clusterizer = GoldClusterizer(
+        table_path=f"{table_name}_batcher_cluster",
+        clustering_tool=GoldSKLearnClusteringTool(
+            KMeans(n_clusters=batch_size, random_state=42, n_init="auto")
+        ),
+        vectorized_key="embeddings",
+        min_pxt_insert_size=min_pxt_insert_size,
+        batch_size=goldener_batch_size,
+        num_workers=num_workers,
+    )
+
+    descriptor = get_gold_descriptor(
+        table_name=f"{table_name}_description",
+        min_pxt_insert_size=min_pxt_insert_size,
+        batch_size=goldener_batch_size,
+        num_workers=num_workers,
+        max_batches=max_batches,
+    )
+
+    return GoldClusterizedBatchSampler(
+        dataset=dataset,
+        descriptor=descriptor,
+        vectorizer=None,
+        batch_size=batch_size,
+        clusterizer=clusterizer,
+        force_same_size=False,
+        shuffle=True,
+        generator=generator,
     )
 
 

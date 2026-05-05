@@ -1,7 +1,7 @@
 defaults:
   - _self_
 
-gold_splitter:
+goldener_config:
   min_pxt_insert_size: 10000
   batch_size: 56
   num_workers: 8
@@ -12,6 +12,7 @@ gold_splitter:
 
 exp:
   split_method: all  # Options: random, gold, or all
+  batch_method: all  # Options: random, gold, or all
   model: cnn  # Options: cnn, bert
   val_ratio: 0.2
   max_epochs: 20
@@ -26,6 +27,7 @@ data:
   tokenizer_name: bert-base-uncased
   max_length: 256
   random_split_state: 42
+  random_shuffle_state: 42
   num_workers: 4
 
 logging:
