@@ -168,13 +168,13 @@ def get_gold_batcher(
     min_pxt_insert_size = goldener_config.min_pxt_insert_size
 
     table_name = f"{name_prefix}_{goldener_config.table_name}"
+    cluster_table_path = f"{table_name}_batcher_cluster"
+    description_table_path = f"{table_name}_batcher_description"
     if update_batch:
-        pxt.drop_table(
-            table_name, if_not_exists="ignore"
-        )
-
+        pxt.drop_table(cluster_table_path, if_not_exists="ignore")
+        pxt.drop_table(description_table_path, if_not_exists="ignore")
     clusterizer = GoldClusterizer(
-        table_path=f"{table_name}_batcher_cluster",
+        table_path=cluster_table_path,
         clustering_tool=GoldSKLearnClusteringTool(
             KMeans(n_clusters=batch_size, random_state=42, n_init="auto")
         ),
@@ -185,7 +185,7 @@ def get_gold_batcher(
     )
 
     descriptor = get_gold_descriptor(
-        table_name=f"{table_name}_description",
+        table_name=description_table_path,
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,
         num_workers=num_workers,

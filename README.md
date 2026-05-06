@@ -15,7 +15,7 @@ uv sync --extra dev
 uv run pre-commit install
 
 # depending on the examples you want to run, you might need to install additional extras, for instance:
-uv sync --extra vision
+uv sync --extra vision --inexact
 ```
 
 The pre-commit hooks will automatically run:
@@ -39,10 +39,8 @@ The pre-commit hooks will automatically run:
 
 **Quick Start**:
 ```bash
-# Install dependencies (from repo root)
-uv sync --extra vision
+uv sync --extra vision --inexact
 
-# Run experiment
 cd image_classification_cifar10
 uv run python cifar10_experiment.py
 ```
@@ -53,10 +51,8 @@ See the [detailed README](image_classification_cifar10/README.md) for more infor
 
 **Quick Start**:
 ```bash
-# Install dependencies (from repo root)
-uv sync --extra vision
+uv sync --extra vision --inexact
 
-# Run experiment
 cd image_segmentation_pascal_voc
 uv run python voc_experiment.py
 ```
@@ -67,10 +63,8 @@ See the [detailed README](image_segmentation_pascal_voc/README.md) for more info
 
 **Quick Start**:
 ```bash
-# Install dependencies (from repo root)
-uv sync --extra text
+uv sync --extra text --inexact
 
-# Run experiment
 cd text_classification_imdb
 uv run python imdb_experiment.py
 ```
