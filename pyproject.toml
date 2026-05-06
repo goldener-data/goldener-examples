@@ -26,6 +26,7 @@ dependencies = [
     "hydra-core",
     "any-gold",
     "iterative-stratification",
+    "k_means_constrained",
 ]
 
 [project.optional-dependencies]

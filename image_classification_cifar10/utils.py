@@ -2,9 +2,10 @@ import pixeltable as pxt
 
 import timm
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Subset
 from PIL.Image import Image
 from sklearn.cluster import KMeans
+from k_means_constrained import KMeansConstrained
 from goldener.vision.vectorizers import get_vit_class_token_vectorizer
 from goldener import (
     GoldSKLearnClusteringTool,
@@ -155,7 +156,7 @@ def get_gold_splitter(
 
 
 def get_gold_batcher(
-    dataset: Dataset,
+    dataset: Subset,
     goldener_config: DictConfig,
     name_prefix: str,
     batch_size: int,
@@ -173,10 +174,23 @@ def get_gold_batcher(
     if update_batch:
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
+
+    dataset_size = len(dataset)
+    if dataset_size % batch_size != 0:
+        raise ValueError(
+            f"The dataset size ({dataset_size}) is not divisible by batch_size {batch_size}"
+        )
+    target_size = dataset_size // batch_size
+
     clusterizer = GoldClusterizer(
         table_path=cluster_table_path,
         clustering_tool=GoldSKLearnClusteringTool(
-            KMeans(n_clusters=batch_size, random_state=42, n_init="auto")
+            tool=KMeansConstrained(
+                n_clusters=batch_size,
+                size_min=target_size,
+                size_max=target_size,
+                random_state=42,
+            )
         ),
         vectorized_key="embeddings",
         min_pxt_insert_size=min_pxt_insert_size,
