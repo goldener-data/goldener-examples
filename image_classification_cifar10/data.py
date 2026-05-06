@@ -383,6 +383,7 @@ class CIFAR10DataModule(LightningDataModule):
                     batch_size=self.batch_size,
                     generator=generator,
                     max_batches=self.max_batches,
+                    update_batch=self.goldener_config.update_batch,
                 )
             }
 

@@ -153,6 +153,7 @@ def get_gold_batcher(
     batch_size: int,
     generator: torch.Generator,
     max_batches: int | None = None,
+    update_batch: bool = True,
 ) -> GoldClusterizedBatchSampler:
     goldener_batch_size = goldener_config.batch_size
     num_workers = goldener_config.num_workers
@@ -160,6 +161,10 @@ def get_gold_batcher(
     pretrained_model = goldener_config.pretrained_model
 
     table_name = f"{name_prefix}_{goldener_config.table_name}"
+    if update_batch:
+        pxt.drop_table(
+            table_name, if_not_exists="ignore"
+        )
 
     clusterizer = GoldClusterizer(
         table_path=f"{table_name}_batcher_cluster",

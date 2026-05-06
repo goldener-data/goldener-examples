@@ -7,10 +7,12 @@ goldener_config:
   num_workers: 8
   table_name: voc_seg_dinov3large_224
   update_selection: True
+  update_batch: True
   n_clusters: 0
 
 exp:
   split_method: all  # Options: random, gold, or all
+  batch_method: random  # Options: random, gold, or all
   model: unet # deeplab, fpn
   val_ratio: 0.3
   max_epochs: 60

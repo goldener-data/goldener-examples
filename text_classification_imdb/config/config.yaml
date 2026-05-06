@@ -8,6 +8,7 @@ goldener_config:
   table_name: imdb_bert_base_uncased_256
   pretrained_model: bert-base-uncased
   update_selection: True
+  update_batch: True
   n_clusters: 0
 
 exp:

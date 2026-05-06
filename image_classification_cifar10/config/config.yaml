@@ -7,10 +7,12 @@ goldener_config:
   num_workers: 15
   table_name: cifar10_dinov3large_224
   update_selection: True
+  update_batch: True
   n_clusters: 0
 
 exp:
   split_method: all  # Options: random, gold, or all
+  batch_method: random  # Options: random, gold, or all
   model: cnn # cnn, resnet, vit
   val_ratio: 0.3
   max_epochs: 50
