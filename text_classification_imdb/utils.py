@@ -19,7 +19,7 @@ from goldener import (
     Filter2DWithCount,
     FilterLocation,
 )
-from goldener.organize import GoldClusterizedBatchSampler
+from goldener.organize import GoldClusterizedBatchSampler, ExhaustedClusterStrategy
 
 from omegaconf import DictConfig
 
@@ -160,6 +160,7 @@ def get_gold_batcher(
     num_workers = goldener_config.num_workers
     min_pxt_insert_size = goldener_config.min_pxt_insert_size
     pretrained_model = goldener_config.pretrained_model
+    n_clusters = goldener_config.n_clusters_batcher
 
     table_name = f"{name_prefix}_{goldener_config.table_name}"
     cluster_table_path = f"{table_name}_batcher_cluster"
@@ -205,8 +206,10 @@ def get_gold_batcher(
         descriptor=descriptor,
         vectorizer=None,
         batch_size=batch_size,
+        n_clusters=n_clusters,
         clusterizer=clusterizer,
         force_same_size=False,
         shuffle=True,
         generator=generator,
+        strategy=ExhaustedClusterStrategy.EXCLUDE,
     )

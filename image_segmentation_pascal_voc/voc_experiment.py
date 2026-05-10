@@ -87,6 +87,7 @@ def run_experiment(
             "splitting_update_selection": cfg.goldener_config.update_selection,
             "model_type": model_type,
             "n_clusters": cfg.goldener_config.n_clusters,
+            "n_clusters_batcher": cfg.goldener_config.n_clusters_batcher,
         }
     )
 

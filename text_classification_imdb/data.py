@@ -198,7 +198,7 @@ class IMDbDataModule(LightningDataModule):
     def _get_batch_args(
         self,
         batch_method: Literal["gold", "random"],
-        dataset: Dataset,
+        dataset: Subset,
     ) -> dict:
         generator = torch.Generator().manual_seed(self.random_shuffle_state)
         if batch_method == "random":
@@ -209,17 +209,18 @@ class IMDbDataModule(LightningDataModule):
                 "drop_last": True,
             }
         else:
-            return {
-                "batch_sampler": get_gold_batcher(
-                    dataset=dataset,
-                    goldener_config=self.goldener_config,
-                    name_prefix=self.settings_as_str,
-                    batch_size=self.batch_size,
-                    generator=generator,
-                    max_batches=self.max_batches,
-                    update_batch=self.goldener_config.update_batch,
-                )
-            }
+            with torch.no_grad():
+                return {
+                    "batch_sampler": get_gold_batcher(
+                        dataset=dataset,
+                        goldener_config=self.goldener_config,
+                        name_prefix=self.settings_as_str,
+                        batch_size=self.batch_size,
+                        generator=generator,
+                        max_batches=self.max_batches,
+                        update_batch=self.goldener_config.update_batch,
+                    )
+                }
 
     def sk_train_dataloader(
         self, batch_method: Literal["gold", "random"]

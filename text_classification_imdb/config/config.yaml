@@ -10,6 +10,7 @@ goldener_config:
   update_selection: True
   update_batch: True
   n_clusters: 0
+  n_clusters_batcher: null
 
 exp:
   split_method: all  # Options: random, gold, or all
