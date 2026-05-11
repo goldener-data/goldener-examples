@@ -178,12 +178,7 @@ def get_gold_batcher(
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    dataset_size = len(dataset)
-    if dataset_size % batch_size != 0:
-        raise ValueError(
-            f"The dataset size ({dataset_size}) is not divisible by batch_size {batch_size}"
-        )
-    target_size = dataset_size / n_clusters
+    target_size = len(dataset) / n_clusters
 
     clusterizer = GoldClusterizer(
         table_path=cluster_table_path,
