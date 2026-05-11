@@ -1,3 +1,5 @@
+import math
+
 import pixeltable as pxt
 
 import timm
@@ -181,15 +183,15 @@ def get_gold_batcher(
         raise ValueError(
             f"The dataset size ({dataset_size}) is not divisible by batch_size {batch_size}"
         )
-    target_size = dataset_size // batch_size
+    target_size = dataset_size / n_clusters
 
     clusterizer = GoldClusterizer(
         table_path=cluster_table_path,
         clustering_tool=GoldSKLearnClusteringTool(
             tool=KMeansConstrained(
                 n_clusters=batch_size,
-                size_min=target_size,
-                size_max=target_size,
+                size_min=math.floor(target_size),
+                size_max=math.ceil(target_size),
                 random_state=42,
             )
         ),
