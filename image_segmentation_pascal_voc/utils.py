@@ -1,4 +1,3 @@
-import math
 from collections import defaultdict
 
 import numpy as np
@@ -6,12 +5,12 @@ import pixeltable as pxt
 
 import timm
 import torch
+from sklearn.decomposition import PCA
 from torch.utils.data import Subset
 from goldener.select import DistanceType
 from goldener.torch_utils import get_unique_values_in_tensor
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from sklearn.cluster import KMeans
-from k_means_constrained import KMeansConstrained
 from goldener.vision.vectorizers import get_vit_class_token_vectorizer
 from goldener import (
     GoldSKLearnClusteringTool,
@@ -23,6 +22,7 @@ from goldener import (
     GoldGreedyKCenterSelectionTool,
     GoldSet,
     GoldSplitter,
+    GoldSKLearnReductionTool,
 )
 from goldener.organize import GoldClusterizedBatchSampler, ExhaustedClusterStrategy
 from omegaconf import DictConfig
@@ -208,18 +208,16 @@ def get_gold_batcher(
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    target_size = len(dataset) / n_clusters
+    sklearn_tool = KMeans(
+        n_clusters=batch_size,
+        random_state=42,
+    )
+    reducer = GoldSKLearnReductionTool(PCA(n_components=2, random_state=0))
 
     clusterizer = GoldClusterizer(
         table_path=cluster_table_path,
-        clustering_tool=GoldSKLearnClusteringTool(
-            tool=KMeansConstrained(
-                n_clusters=batch_size,
-                size_min=math.floor(target_size),
-                size_max=math.ceil(target_size),
-                random_state=42,
-            )
-        ),
+        clustering_tool=GoldSKLearnClusteringTool(tool=sklearn_tool),
+        reducer=reducer,
         vectorized_key="embeddings",
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,

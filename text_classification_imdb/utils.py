@@ -1,10 +1,8 @@
-import math
-
 import pixeltable as pxt
 import torch
+from sklearn.decomposition import PCA
 from torch.utils.data import Subset
 from sklearn.cluster import KMeans
-from k_means_constrained import KMeansConstrained
 from transformers import AutoModel
 
 from goldener import (
@@ -20,6 +18,7 @@ from goldener import (
     TensorVectorizer,
     Filter2DWithCount,
     FilterLocation,
+    GoldSKLearnReductionTool,
 )
 from goldener.organize import GoldClusterizedBatchSampler, ExhaustedClusterStrategy
 
@@ -171,18 +170,18 @@ def get_gold_batcher(
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    target_size = len(dataset) / n_clusters
+    sklearn_tool = KMeans(
+        n_clusters=batch_size,
+        random_state=42,
+    )
+    reducer = GoldSKLearnReductionTool(PCA(n_components=2, random_state=0))
 
     clusterizer = GoldClusterizer(
         table_path=cluster_table_path,
         clustering_tool=GoldSKLearnClusteringTool(
-            tool=KMeansConstrained(
-                n_clusters=batch_size,
-                size_min=math.floor(target_size),
-                size_max=math.ceil(target_size),
-                random_state=42,
-            )
+            tool=sklearn_tool,
         ),
+        reducer=reducer,
         vectorized_key="embeddings",
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,

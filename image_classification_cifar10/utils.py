@@ -1,13 +1,11 @@
-import math
-
 import pixeltable as pxt
 
 import timm
 import torch
+from sklearn.decomposition import PCA
 from torch.utils.data import Subset
 from PIL.Image import Image
 from sklearn.cluster import KMeans
-from k_means_constrained import KMeansConstrained
 from goldener.vision.vectorizers import get_vit_class_token_vectorizer
 from goldener import (
     GoldSKLearnClusteringTool,
@@ -21,6 +19,7 @@ from goldener import (
     GoldSplitter,
 )
 from goldener.organize import GoldClusterizedBatchSampler, ExhaustedClusterStrategy
+from goldener.reduce import GoldSKLearnReductionTool
 
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, ToTensor, Normalize, Resize
@@ -170,6 +169,8 @@ def get_gold_batcher(
     num_workers = goldener_config.num_workers
     min_pxt_insert_size = goldener_config.min_pxt_insert_size
     n_clusters = goldener_config.n_clusters_batcher
+    if n_clusters is None:
+        n_clusters = batch_size
 
     table_name = f"{name_prefix}_{goldener_config.table_name}"
     cluster_table_path = f"{table_name}_batcher_cluster"
@@ -178,18 +179,16 @@ def get_gold_batcher(
         pxt.drop_table(cluster_table_path, if_not_exists="ignore")
         pxt.drop_table(description_table_path, if_not_exists="ignore")
 
-    target_size = len(dataset) / n_clusters
+    sklearn_tool = KMeans(
+        n_clusters=batch_size,
+        random_state=42,
+    )
+    reducer = GoldSKLearnReductionTool(PCA(n_components=2, random_state=0))
 
     clusterizer = GoldClusterizer(
         table_path=cluster_table_path,
-        clustering_tool=GoldSKLearnClusteringTool(
-            tool=KMeansConstrained(
-                n_clusters=batch_size,
-                size_min=math.floor(target_size),
-                size_max=math.ceil(target_size),
-                random_state=42,
-            )
-        ),
+        clustering_tool=GoldSKLearnClusteringTool(tool=sklearn_tool),
+        reducer=reducer,
         vectorized_key="embeddings",
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,
