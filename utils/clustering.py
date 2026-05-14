@@ -38,7 +38,7 @@ class NormmalizedKMeans(KMeans):
         y: None | np.ndarray = None,
         sample_weight: None | np.ndarray = None,
     ) -> np.ndarray:
-        return self.fit(self.normalizer.transform(X), y, sample_weight)
+        return super().fit(self.normalizer.transform(X), y, sample_weight)
 
     def fit_predict(
         self,
@@ -46,7 +46,7 @@ class NormmalizedKMeans(KMeans):
         y: None | np.ndarray = None,
         sample_weight: None | np.ndarray = None,
     ) -> np.ndarray:
-        return self.fit_predict(self.normalizer.transform(X), y, sample_weight)
+        return super().fit_predict(self.normalizer.transform(X), y, sample_weight)
 
     def predict(
         self,
@@ -54,7 +54,7 @@ class NormmalizedKMeans(KMeans):
         y: None | np.ndarray = None,
         sample_weight: None | np.ndarray = None,
     ) -> np.ndarray:
-        return self.predict(self.normalizer.transform(X), y, sample_weight)
+        return super().predict(self.normalizer.transform(X), y, sample_weight)
 
     def fit_transform(
         self,
@@ -62,10 +62,10 @@ class NormmalizedKMeans(KMeans):
         y: None | np.ndarray = None,
         sample_weight: None | np.ndarray = None,
     ) -> np.ndarray:
-        return self.fit_transform(self.normalizer.transform(X), y, sample_weight)
+        return super().fit_transform(self.normalizer.transform(X), y, sample_weight)
 
     def transform(self, X: np.ndarray) -> np.ndarray:
-        return self.transform(self.normalizer.transform(X))
+        return super().transform(self.normalizer.transform(X))
 
     def score(
         self,
@@ -73,4 +73,4 @@ class NormmalizedKMeans(KMeans):
         y: None | np.ndarray = None,
         sample_weight: None | np.ndarray = None,
     ) -> np.ndarray:
-        return self.score(self.normalizer.transform(X), y, sample_weight)
+        return super().score(self.normalizer.transform(X), y, sample_weight)
