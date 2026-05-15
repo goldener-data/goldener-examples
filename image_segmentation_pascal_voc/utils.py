@@ -5,7 +5,8 @@ import pixeltable as pxt
 
 import timm
 import torch
-from torch.utils.data import Dataset
+from sklearn.decomposition import PCA
+from torch.utils.data import Subset
 from goldener.select import DistanceType
 from goldener.torch_utils import get_unique_values_in_tensor
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
@@ -21,10 +22,13 @@ from goldener import (
     GoldGreedyKCenterSelectionTool,
     GoldSet,
     GoldSplitter,
+    GoldSKLearnReductionTool,
 )
-from goldener.organize import GoldClusterizedBatchSampler
+from goldener.organize import GoldClusterizedBatchSampler, ExhaustedClusterStrategy
 from omegaconf import DictConfig
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, ToImage
+
+from utils.clustering import NormmalizedKMeans
 
 PASCAL_VOC_PREPROCESS = Compose(
     [
@@ -186,24 +190,36 @@ def get_gold_splitter(
 
 
 def get_gold_batcher(
-    dataset: Dataset,
+    dataset: Subset,
     goldener_config: DictConfig,
     name_prefix: str,
     batch_size: int,
     generator: torch.Generator,
     max_batches: int | None = None,
+    update_batch: bool = True,
 ) -> GoldClusterizedBatchSampler:
     goldener_batch_size = goldener_config.batch_size
     num_workers = goldener_config.num_workers
     min_pxt_insert_size = goldener_config.min_pxt_insert_size
+    n_clusters = goldener_config.n_clusters_batcher
 
     table_name = f"{name_prefix}_{goldener_config.table_name}"
+    cluster_table_path = f"{table_name}_batcher_cluster"
+    description_table_path = f"{table_name}_batcher_description"
+    if update_batch:
+        pxt.drop_table(cluster_table_path, if_not_exists="ignore")
+        pxt.drop_table(description_table_path, if_not_exists="ignore")
+
+    sklearn_tool = NormmalizedKMeans(
+        n_clusters=batch_size,
+        random_state=42,
+    )
+    reducer = GoldSKLearnReductionTool(PCA(n_components=2, random_state=0))
 
     clusterizer = GoldClusterizer(
-        table_path=f"{table_name}_batcher_cluster",
-        clustering_tool=GoldSKLearnClusteringTool(
-            KMeans(n_clusters=batch_size, random_state=42, n_init="auto")
-        ),
+        table_path=cluster_table_path,
+        clustering_tool=GoldSKLearnClusteringTool(tool=sklearn_tool),
+        reducer=reducer,
         vectorized_key="embeddings",
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,
@@ -211,7 +227,7 @@ def get_gold_batcher(
     )
 
     descriptor = get_gold_descriptor(
-        table_name=f"{table_name}_description",
+        table_name=description_table_path,
         min_pxt_insert_size=min_pxt_insert_size,
         batch_size=goldener_batch_size,
         num_workers=num_workers,
@@ -223,10 +239,12 @@ def get_gold_batcher(
         descriptor=descriptor,
         vectorizer=None,
         batch_size=batch_size,
+        n_clusters=n_clusters,
         clusterizer=clusterizer,
         force_same_size=False,
         shuffle=True,
         generator=generator,
+        strategy=ExhaustedClusterStrategy.EXCLUDE,
     )
 
 
